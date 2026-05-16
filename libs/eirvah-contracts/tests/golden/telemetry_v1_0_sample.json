@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "correlation_id": "01HZXC8P9G7Q3M6V0K2T8R5W4A",
+  "value": 23.4,
+  "value_type": "double",
+  "semantic_type": "temperature.celsius",
+  "unit": "degC",
+  "quality": "good",
+  "uns_path": {
+    "enterprise": "uniza",
+    "site": "zilina",
+    "area": "factory1",
+    "line": "line_a",
+    "cell": "bottler",
+    "equipment": "temperature_sensor_01",
+    "measurement": "temperature"
+  },
+  "source": {
+    "protocol": "opcua",
+    "endpoint": "opc.tcp://opcua-simulator:4840",
+    "node_id": "ns=2;s=Bottler.Temperature01"
+  },
+  "timestamps": {
+    "source": "2026-05-16T13:45:22.123456Z",
+    "edge_ingress": "2026-05-16T13:45:22.150123Z",
+    "edge_publish": "2026-05-16T13:45:22.152456Z"
+  }
+}
