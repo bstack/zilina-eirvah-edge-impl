@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opcua-simulator-env
+data:
+  OPCUA_SIMULATOR_ENDPOINT: "opc.tcp://0.0.0.0:4840/eirvah/simulator"
+  OPCUA_SIMULATOR_TICK_RATE_MS: "100"
+  OPCUA_SIMULATOR_SEED: "1"
+  OPCUA_SIMULATOR_ADDRESS_SPACE_PATH: "/etc/opcua-simulator/opcua-address-space.yaml"
+  OPCUA_SIMULATOR_HTTP_PORT: "8080"
+  OPCUA_SIMULATOR_HOT_SPIKE_PROBABILITY: "0.005"
+  OPCUA_SIMULATOR_MOTOR_FAULT_PROBABILITY: "0.0"
+  OPCUA_SIMULATOR_LOG_LEVEL: "INFO"

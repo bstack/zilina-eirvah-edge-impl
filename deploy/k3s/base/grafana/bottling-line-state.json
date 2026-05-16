@@ -1,0 +1,96 @@
+{
+  "uid": "bottling-line-state",
+  "title": "Bottling Line State",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": ["eirvah", "device-truth"],
+  "timezone": "browser",
+  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "5s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Temperature vs setpoint",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "eirvah_simulator_temperature_celsius",
+          "legendFormat": "temperature {{equipment}}",
+          "refId": "T"
+        },
+        {
+          "expr": "eirvah_simulator_setpoint_celsius",
+          "legendFormat": "setpoint {{equipment}}",
+          "refId": "S"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "celsius" } }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Current setpoint (°C)",
+      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "eirvah_simulator_setpoint_celsius", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "celsius" } }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Motor state",
+      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "eirvah_simulator_motor_state", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": {
+              "0": { "text": "stopped",  "color": "gray"   },
+              "1": { "text": "starting", "color": "yellow" },
+              "2": { "text": "running",  "color": "green"  },
+              "3": { "text": "fault",    "color": "red"    }
+            }}
+          ]
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Motor RPM",
+      "gridPos": { "x": 12, "y": 4, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "eirvah_simulator_motor_rpm", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "rotrpm" } }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Throughput (bottles/s)",
+      "gridPos": { "x": 18, "y": 4, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "eirvah_simulator_throughput_bottles_per_second", "refId": "A" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Setpoint writes (cumulative)",
+      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 6 },
+      "targets": [
+        {
+          "expr": "eirvah_simulator_setpoint_writes_total",
+          "legendFormat": "{{writer}}",
+          "refId": "A",
+          "instant": true,
+          "format": "table"
+        }
+      ]
+    }
+  ]
+}

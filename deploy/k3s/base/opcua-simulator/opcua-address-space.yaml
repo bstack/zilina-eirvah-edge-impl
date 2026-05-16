@@ -1,0 +1,66 @@
+# Bottling-line address space (spec §9.1).
+namespace: "https://eirvah.uniza/zilina/factory1"
+uns_defaults:
+  enterprise: uniza
+  site: zilina
+  area: factory1
+  line: line_a
+equipments:
+  - name: bottler
+    nodes:
+      - id: TemperatureSensor01.Temperature
+        kind: measurement
+        cell: bottler
+        equipment: temperature_sensor_01
+        measurement: temperature
+        value_type: double
+        unit: degC
+        initial: 22.0
+        semantic_type: temperature.celsius
+        dynamics: temperature
+
+      - id: ThroughputMeter01.Throughput
+        kind: measurement
+        cell: bottler
+        equipment: throughput_meter_01
+        measurement: throughput
+        value_type: double
+        unit: bottle/s
+        initial: 0.0
+        semantic_type: flow.bps
+        dynamics: throughput
+
+      - id: Motor01.State
+        kind: measurement
+        cell: bottler
+        equipment: motor_01
+        measurement: state
+        value_type: int64
+        unit: dimensionless
+        initial: 0
+        semantic_type: state.enum
+        dynamics: motor_state
+
+      - id: Motor01.Rpm
+        kind: measurement
+        cell: bottler
+        equipment: motor_01
+        measurement: rpm
+        value_type: double
+        unit: rpm
+        initial: 0.0
+        semantic_type: speed.rpm
+        dynamics: motor_rpm
+
+      - id: SetpointUnit.SetpointTemperature
+        kind: setpoint
+        cell: bottler
+        equipment: setpoint_unit
+        measurement: setpoint_temperature
+        value_type: double
+        unit: degC
+        initial: 22.0
+        semantic_type: setpoint.target
+        policy:
+          min: 15.0
+          max: 30.0

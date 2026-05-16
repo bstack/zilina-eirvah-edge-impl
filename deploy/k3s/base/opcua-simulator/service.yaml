@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: opcua-simulator
+  labels: { app.kubernetes.io/name: opcua-simulator }
+spec:
+  selector: { app.kubernetes.io/name: opcua-simulator }
+  ports:
+    - { name: opcua, port: 4840, targetPort: 4840 }
+    - { name: http,  port: 8080, targetPort: 8080 }
