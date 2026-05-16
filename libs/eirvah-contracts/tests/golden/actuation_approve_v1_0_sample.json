@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "correlation_id": "01HZXC8P9G7Q3M6V0K2T8R5W4A",
+  "requester": "decision-agent-stub",
+  "target_uns_topic": "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature",
+  "requested_value": 22.0,
+  "value_type": "double",
+  "reason": "telemetry threshold breach: temperature > 26.0 for 30s",
+  "requested_at": "2026-05-16T13:45:25.000000Z",
+  "deadline": "2026-05-16T13:45:30.000000Z",
+  "decision": "approve",
+  "written_at": "2026-05-16T13:45:25.500000Z"
+}
