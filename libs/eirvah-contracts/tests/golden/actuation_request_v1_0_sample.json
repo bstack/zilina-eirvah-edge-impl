@@ -6,6 +6,6 @@
   "requested_value": 22.0,
   "value_type": "double",
   "reason": "telemetry threshold breach: temperature > 26.0 for 30s",
-  "requested_at": "2026-05-16T13:45:25.000000Z",
-  "deadline": "2026-05-16T13:45:30.000000Z"
+  "requested_at": "2026-05-16T13:45:25Z",
+  "deadline": "2026-05-16T13:45:30Z"
 }
