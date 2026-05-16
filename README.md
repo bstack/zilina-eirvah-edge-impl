@@ -11,7 +11,7 @@ This repo is the implementation half of William Francis Stack's PhD work at the 
 
 ## Status
 
-- **Plan 1 — Foundations:** in progress.
+- **Plan 1 — Foundations:** complete (`plan-1-complete` tag) — 116 tests passing.
 - **Plan 2 — Telemetry path:** queued.
 - **Plan 3 — Actuation path:** queued.
 - **Plan 4 — Polish and reproducibility:** queued.
