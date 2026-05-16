@@ -1,0 +1,17 @@
+[project]
+name = "eirvah-bus"
+version = "0.0.0"
+description = "NATS client wrappers for EirVah edge services."
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "nats-py>=2.7",
+    "eirvah-contracts",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eirvah_bus"]
