@@ -157,3 +157,8 @@ cython_debug/
 local/
 data/
 secrets/
+
+# EirVah-specific tooling
+.uv/
+.tilt-cache/
+*.local.env

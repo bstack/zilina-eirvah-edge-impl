@@ -1,28 +1,32 @@
 [project]
-name = "eirvah-edge"
+name = "eirvah-edge-code"
 version = "0.0.0"
-description = "EirVah edge layer — workspace root for contracts, bus, observability, and the OPC UA simulator."
-requires-python = ">=3.12,<3.13"
+description = "EirVah Edge Integration Layer — vertical slice"
+requires-python = ">=3.12"
+authors = [{ name = "William Francis Stack" }]
 license = { text = "Apache-2.0" }
-authors = [
-    { name = "EirVah Project" },
-]
 
 [tool.uv]
 package = false
 
 [tool.uv.workspace]
 members = [
-    "libs/*",
-    "services/*",
+    "libs/eirvah-contracts",
+    "libs/eirvah-bus",
+    "libs/eirvah-observability",
+    "services/opcua-simulator",
 ]
+
+[tool.uv.sources]
+eirvah-contracts     = { workspace = true }
+eirvah-bus           = { workspace = true }
+eirvah-observability = { workspace = true }
 
 [dependency-groups]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
-    "pytest-cov>=5.0",
+    "httpx>=0.27",
     "ruff>=0.6",
     "mypy>=1.11",
-    "pre-commit>=3.8",
 ]
