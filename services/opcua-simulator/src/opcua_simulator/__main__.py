@@ -1,13 +1,17 @@
-"""Entry point — full wiring implemented in Task 25."""
+"""Entry point for the OPC UA simulator pod."""
 
 from __future__ import annotations
 
 import asyncio
 
+from opcua_simulator.config import SimulatorSettings
+from opcua_simulator.server import run
 
-async def main() -> None:
-    raise SystemExit("server not yet wired; implemented in Task 25")
+
+def main() -> None:
+    settings = SimulatorSettings()
+    asyncio.run(run(settings))
 
 
 if __name__ == "__main__":  # pragma: no cover
-    asyncio.run(main())
+    main()
