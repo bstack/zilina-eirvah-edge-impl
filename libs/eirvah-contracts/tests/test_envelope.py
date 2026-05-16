@@ -1,8 +1,7 @@
 import json
 
 import pytest
-
-from eirvah_contracts.envelope import NATSEnvelope, EnvelopeError
+from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
 from eirvah_contracts.ulid import generate_correlation_id
 
 

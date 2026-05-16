@@ -1,7 +1,6 @@
 import pytest
+from eirvah_contracts.uns import UNSPath, build_uns_topic, parse_uns_topic
 from pydantic import ValidationError
-
-from eirvah_contracts.uns import UNSPath, parse_uns_topic, build_uns_topic
 
 
 def _sample() -> UNSPath:

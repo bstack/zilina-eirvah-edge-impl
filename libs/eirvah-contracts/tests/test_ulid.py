@@ -1,7 +1,6 @@
 import re
 
 import pytest
-
 from eirvah_contracts.ulid import generate_correlation_id, is_valid_correlation_id
 
 
