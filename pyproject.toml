@@ -21,6 +21,7 @@ members = [
 eirvah-contracts     = { workspace = true }
 eirvah-bus           = { workspace = true }
 eirvah-observability = { workspace = true }
+opcua-simulator      = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -28,6 +29,7 @@ dev = [
     "eirvah-contracts",
     "eirvah-bus",
     "eirvah-observability",
+    "opcua-simulator",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "httpx>=0.27",
