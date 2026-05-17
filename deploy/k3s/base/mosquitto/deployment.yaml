@@ -20,7 +20,8 @@ spec:
             - name: config
               mountPath: /mosquitto/config
             - name: passwd
-              mountPath: /mosquitto/passwd
+              mountPath: /run/mosquitto-passwd
+              subPath: passwd
               readOnly: true
           readinessProbe:
             tcpSocket: { port: 1883 }

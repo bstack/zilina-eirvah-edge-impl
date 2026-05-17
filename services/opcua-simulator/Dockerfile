@@ -7,14 +7,13 @@ COPY libs /workspace/libs
 COPY services/opcua-simulator /workspace/services/opcua-simulator
 RUN uv sync --frozen --no-dev --package opcua-simulator
 
-FROM gcr.io/distroless/python3-debian12 AS runtime
-WORKDIR /app
-COPY --from=builder /workspace/.venv /app/.venv
-COPY --from=builder /workspace/libs /app/libs
-COPY --from=builder /workspace/services/opcua-simulator/src /app/src
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH="/app/src" \
+FROM python:3.12-slim AS runtime
+WORKDIR /workspace
+COPY --from=builder /workspace/.venv /workspace/.venv
+COPY --from=builder /workspace/libs /workspace/libs
+COPY --from=builder /workspace/services/opcua-simulator/src /workspace/services/opcua-simulator/src
+ENV PATH="/workspace/.venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1
-USER nonroot:nonroot
+USER nobody:nogroup
 EXPOSE 4840 8080
-ENTRYPOINT ["/app/.venv/bin/python", "-m", "opcua_simulator"]
+ENTRYPOINT ["/workspace/.venv/bin/python", "-m", "opcua_simulator"]

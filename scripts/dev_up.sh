@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Create the local k3d cluster, build images, import, and apply the local overlay.
+# Create the local kind cluster, build images, import them,
+# and apply the local overlay.
 # Idempotent: safe to re-run.
 
 set -euo pipefail
@@ -11,18 +12,19 @@ NAMESPACE="eirvah-edge"
 SERVICES=(opcua-simulator)
 
 # 1. Cluster
-if ! k3d cluster list 2>/dev/null | awk 'NR>1{print $1}' | grep -qx "${CLUSTER}"; then
-  echo "==> creating k3d cluster '${CLUSTER}'"
-  k3d cluster create "${CLUSTER}" --wait
+if ! kind get clusters 2>/dev/null | grep -qx "${CLUSTER}"; then
+  echo "==> creating kind cluster '${CLUSTER}'"
+  kind create cluster --name "${CLUSTER}" --wait 60s
 else
-  echo "==> k3d cluster '${CLUSTER}' already exists"
+  echo "==> kind cluster '${CLUSTER}' already exists"
 fi
 
 # 2. Build + import images
 ./scripts/build_all.sh local
+
 for svc in "${SERVICES[@]}"; do
-  echo "==> importing ${svc}:local into cluster"
-  k3d image import "${svc}:local" --cluster "${CLUSTER}"
+  echo "==> loading ${svc}:local into kind cluster"
+  kind load docker-image "${svc}:local" --name "${CLUSTER}"
 done
 
 # 3. Apply manifests
@@ -31,7 +33,10 @@ kubectl apply -k deploy/k3s/overlays/local
 
 # 4. Wait for readiness
 echo "==> waiting for all deployments to become Available (up to 3 min)"
-kubectl -n "${NAMESPACE}" wait --for=condition=Available --timeout=180s deployment --all
+kubectl -n "${NAMESPACE}" wait \
+  --for=condition=Available \
+  --timeout=180s \
+  deployment --all
 
 # 5. Hints
 echo ""
