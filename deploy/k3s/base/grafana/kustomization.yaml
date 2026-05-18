@@ -11,3 +11,4 @@ configMapGenerator:
   - name: grafana-dashboards
     files:
       - bottling-line-state.json
+      - eirvah-edge-pipeline.json
