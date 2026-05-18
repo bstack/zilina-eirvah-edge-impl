@@ -1,0 +1,28 @@
+# Per-node unit and type rules for data-converter (spec §3.1).
+# scale and offset are optional; absent means pass-through.
+# drop_bad_quality: false — bad quality messages still flow (spec §4.2).
+rules:
+  - node_id: "Bottler.Temperature01"
+    value_type: double
+    unit: degC
+    drop_bad_quality: false
+
+  - node_id: "Bottler.ThroughputMeter01"
+    value_type: double
+    unit: "bottle/s"
+    drop_bad_quality: false
+
+  - node_id: "Bottler.Motor01.State"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "Bottler.Motor01.Rpm"
+    value_type: double
+    unit: rpm
+    drop_bad_quality: false
+
+  - node_id: "Bottler.SetpointUnit.SetpointTemperature"
+    value_type: double
+    unit: degC
+    drop_bad_quality: false

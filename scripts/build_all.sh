@@ -6,7 +6,14 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 TAG="${1:-local}"
-SERVICES=(opcua-simulator)
+SERVICES=(
+  opcua-simulator
+  opcua-data-subscriber
+  data-converter
+  uns-auto-contextualizer
+  mqtt-uns-publisher
+  uns-contextualizer-orchestrator
+)
 
 for svc in "${SERVICES[@]}"; do
   echo "==> building ${svc}:${TAG}"

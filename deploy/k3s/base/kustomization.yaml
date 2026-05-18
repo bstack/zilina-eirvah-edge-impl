@@ -9,6 +9,11 @@ resources:
   - prometheus
   - grafana
   - opcua-simulator
+  - opcua-data-subscriber
+  - data-converter
+  - uns-auto-contextualizer
+  - mqtt-uns-publisher
+  - uns-contextualizer-orchestrator
 labels:
   - includeSelectors: true
     pairs:

@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mqtt-uns-publisher
+  labels: { app.kubernetes.io/name: mqtt-uns-publisher }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: mqtt-uns-publisher }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: mqtt-uns-publisher }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: mqtt-uns-publisher
+          image: mqtt-uns-publisher:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MQTT_UNS_PUBLISHER_NATS_SERVERS
+              value: '["nats://nats:4222"]'
+            - name: MQTT_UNS_PUBLISHER_MQTT_HOST
+              value: mosquitto
+            - name: MQTT_UNS_PUBLISHER_MQTT_USERNAME
+              value: eirvah
+            - name: MQTT_UNS_PUBLISHER_MQTT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mosquitto-credentials
+                  key: password
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "10m", memory: "64Mi" }
+            limits:   { cpu: "100m", memory: "128Mi" }

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mqtt-uns-publisher
+  labels: { app.kubernetes.io/name: mqtt-uns-publisher }
+spec:
+  selector: { app.kubernetes.io/name: mqtt-uns-publisher }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }
