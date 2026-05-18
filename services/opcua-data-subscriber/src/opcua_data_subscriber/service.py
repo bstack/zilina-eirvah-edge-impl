@@ -68,7 +68,7 @@ def build_raw_envelope(
     source_endpoint: str,
     data_value: Any,
 ) -> RawSignalEnvelope:
-    sc = data_value.StatusCode
+    sc = data_value.StatusCode_
     if sc.is_bad():
         quality: Quality = "bad"
     elif sc.is_uncertain():
@@ -131,7 +131,7 @@ class _DataChangeHandler:  # asyncua calls datachange_notification by duck-typin
                 alias=alias,
                 value=val,
                 source_endpoint=self._endpoint,
-                data_value=data,
+                data_value=data.monitored_item.Value,
             )
             envelope = wrap_in_nats_envelope(raw)
             await self._on_message(envelope)

@@ -8,6 +8,7 @@ data:
     datasources:
       - name: Prometheus
         type: prometheus
+        uid: eirvah-prometheus
         access: proxy
         url: http://prometheus.eirvah-edge.svc.cluster.local:9090
         isDefault: true

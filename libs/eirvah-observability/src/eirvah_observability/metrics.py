@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from prometheus_client import Counter, Gauge, Histogram
-from prometheus_client.registry import CollectorRegistry
+from prometheus_client.registry import REGISTRY, CollectorRegistry
 
 EIRVAH_METRIC_PREFIX = "eirvah"
 
@@ -35,7 +35,7 @@ def make_counter(
     labelnames: Sequence[str],
     registry: CollectorRegistry | None = None,
 ) -> Counter:
-    return Counter(_full_name(name), documentation, labelnames=labelnames, registry=registry)
+    return Counter(_full_name(name), documentation, labelnames=labelnames, registry=registry or REGISTRY)
 
 
 def make_gauge(
@@ -45,7 +45,7 @@ def make_gauge(
     labelnames: Sequence[str],
     registry: CollectorRegistry | None = None,
 ) -> Gauge:
-    return Gauge(_full_name(name), documentation, labelnames=labelnames, registry=registry)
+    return Gauge(_full_name(name), documentation, labelnames=labelnames, registry=registry or REGISTRY)
 
 
 def make_histogram(
@@ -61,5 +61,5 @@ def make_histogram(
         documentation,
         labelnames=labelnames,
         buckets=buckets,
-        registry=registry,
+        registry=registry or REGISTRY,
     )
