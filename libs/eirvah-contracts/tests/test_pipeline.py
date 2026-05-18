@@ -55,8 +55,10 @@ def test_publish_request_round_trip() -> None:
 
 
 def test_publish_request_rejects_bad_correlation_id() -> None:
+    from pydantic import ValidationError
+
     now = datetime.now(UTC)
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         PublishRequest(
             uns_topic="a/b/c/d/e/f/g",
             correlation_id="not-a-ulid",
@@ -68,6 +70,6 @@ def test_publish_request_rejects_bad_correlation_id() -> None:
             uns_path=_uns(),
             source_endpoint="opc.tcp://localhost:4840",
             source_node_id="x",
-            source_timestamp=datetime.now(UTC),
-            edge_ingress=datetime.now(UTC),
+            source_timestamp=now,
+            edge_ingress=now,
         )

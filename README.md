@@ -12,7 +12,7 @@ This repo is the implementation half of William Francis Stack's PhD work at the 
 ## Status
 
 - **Plan 1 — Foundations:** complete (`plan-1-complete` tag) — 116 tests passing.
-- **Plan 2 — Telemetry path:** queued.
+- **Plan 2 — Telemetry path:** complete — 5 telemetry services, 141 unit tests passing, EirVah Edge Pipeline dashboard added.
 - **Plan 3 — Actuation path:** queued.
 - **Plan 4 — Polish and reproducibility:** queued.
 

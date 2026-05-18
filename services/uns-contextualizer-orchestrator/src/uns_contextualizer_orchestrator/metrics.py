@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from prometheus_client.registry import REGISTRY, CollectorRegistry
-
 from eirvah_observability.metrics import make_counter, make_histogram
+from prometheus_client.registry import REGISTRY, CollectorRegistry
 
 
 class PipelineMetrics:
