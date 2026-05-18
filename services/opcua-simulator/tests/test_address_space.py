@@ -42,3 +42,39 @@ def test_load_rejects_malformed_yaml(tmp_path: Path) -> None:
     bad.write_text(": : :\n")
     with pytest.raises(ValueError):
         load_address_space(bad)
+
+
+def test_node_definition_bad_quality_pct_defaults_to_zero() -> None:
+    from opcua_simulator.address_space import NodeDefinition
+
+    node = NodeDefinition(
+        id="x",
+        kind="measurement",
+        cell="c",
+        equipment="e",
+        measurement="m",
+        value_type="double",
+        unit="degC",
+        initial=0.0,
+        semantic_type="temperature.celsius",
+    )
+    assert node.bad_quality_pct == 0.0
+    assert node.uncertain_quality_pct == 0.0
+
+
+def test_node_definition_accepts_bad_quality_pct() -> None:
+    from opcua_simulator.address_space import NodeDefinition
+
+    node = NodeDefinition(
+        id="x",
+        kind="measurement",
+        cell="c",
+        equipment="e",
+        measurement="m",
+        value_type="double",
+        unit="degC",
+        initial=0.0,
+        semantic_type="temperature.celsius",
+        bad_quality_pct=0.1,
+    )
+    assert node.bad_quality_pct == 0.1

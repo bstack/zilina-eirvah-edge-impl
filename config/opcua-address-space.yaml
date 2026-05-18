@@ -18,6 +18,7 @@ equipments:
         initial: 22.0
         semantic_type: temperature.celsius
         dynamics: temperature
+        bad_quality_pct: 0.1
 
       - id: ThroughputMeter01.Throughput
         kind: measurement

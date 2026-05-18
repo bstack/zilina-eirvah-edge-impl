@@ -29,6 +29,8 @@ class NodeDefinition(BaseModel):
     semantic_type: str
     dynamics: str | None = None
     policy: NodePolicy | None = None
+    bad_quality_pct: float = 0.0
+    uncertain_quality_pct: float = 0.0
 
 
 class EquipmentDefinition(BaseModel):

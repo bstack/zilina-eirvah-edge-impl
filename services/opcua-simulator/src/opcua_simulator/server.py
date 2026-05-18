@@ -116,7 +116,9 @@ class SimulatorRuntime:
         )
         for node_def in self._address_space.iter_nodes():
             self._quality_per_node[node_def.id] = QualityEmitter(
-                rng=self.rng, bad_quality_pct=0.0, uncertain_quality_pct=0.0
+                rng=self.rng,
+                bad_quality_pct=node_def.bad_quality_pct,
+                uncertain_quality_pct=node_def.uncertain_quality_pct,
             )
 
     async def _populate_address_space(self, ns_idx: int) -> None:
