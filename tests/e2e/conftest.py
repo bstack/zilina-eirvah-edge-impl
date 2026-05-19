@@ -16,6 +16,8 @@ MQTT_LOCAL_PORT = 11883
 NATS_LOCAL_PORT = 14222
 OPCUA_LOCAL_PORT = 14840
 PROM_LOCAL_PORT = 19090
+AMQP_LOCAL_PORT = 25672
+AMQP_URL = f"amqp://eirvah:eirvah-dev-password@localhost:{AMQP_LOCAL_PORT}/"
 
 
 def _cluster_is_up() -> bool:
@@ -55,6 +57,7 @@ class EirVahCluster:
         f"opc.tcp://localhost:{OPCUA_LOCAL_PORT}/eirvah/simulator"
     )
     prometheus_url: str = f"http://localhost:{PROM_LOCAL_PORT}"
+    amqp_url: str = AMQP_URL
 
     @asynccontextmanager
     async def mqtt_client(
@@ -84,6 +87,7 @@ def eirvah_cluster() -> Generator[EirVahCluster, None, None]:
         _port_forward("nats", NATS_LOCAL_PORT, 4222),
         _port_forward("opcua-simulator", OPCUA_LOCAL_PORT, 4840),
         _port_forward("prometheus", PROM_LOCAL_PORT, 9090),
+        _port_forward("rabbitmq", AMQP_LOCAL_PORT, 5672),
     ]
     time.sleep(2)  # give port-forwards a moment to bind
 
