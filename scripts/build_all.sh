@@ -13,6 +13,11 @@ SERVICES=(
   uns-auto-contextualizer
   mqtt-uns-publisher
   uns-contextualizer-orchestrator
+  amqp-actuation-event-subscriber
+  actuation-control-orchestrator
+  actuation-event-validator
+  actuation-signal-publisher
+  decision-agent-stub
 )
 
 for svc in "${SERVICES[@]}"; do

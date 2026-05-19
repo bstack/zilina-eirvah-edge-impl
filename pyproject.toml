@@ -20,6 +20,11 @@ members = [
     "services/uns-auto-contextualizer",
     "services/mqtt-uns-publisher",
     "services/uns-contextualizer-orchestrator",
+    "services/amqp-actuation-event-subscriber",
+    "services/actuation-control-orchestrator",
+    "services/actuation-event-validator",
+    "services/actuation-signal-publisher",
+    "services/decision-agent-stub",
 ]
 
 [tool.uv.sources]
@@ -31,7 +36,12 @@ opcua-data-subscriber           = { workspace = true }
 data-converter                  = { workspace = true }
 uns-auto-contextualizer         = { workspace = true }
 mqtt-uns-publisher              = { workspace = true }
-uns-contextualizer-orchestrator = { workspace = true }
+uns-contextualizer-orchestrator          = { workspace = true }
+amqp-actuation-event-subscriber          = { workspace = true }
+actuation-control-orchestrator           = { workspace = true }
+actuation-event-validator                = { workspace = true }
+actuation-signal-publisher               = { workspace = true }
+decision-agent-stub                      = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -44,6 +54,12 @@ dev = [
     "uns-auto-contextualizer",
     "mqtt-uns-publisher",
     "uns-contextualizer-orchestrator",
+    "amqp-actuation-event-subscriber",
+    "actuation-control-orchestrator",
+    "actuation-event-validator",
+    "actuation-signal-publisher",
+    "decision-agent-stub",
+    "aio-pika>=9.0",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
     "httpx>=0.27",
