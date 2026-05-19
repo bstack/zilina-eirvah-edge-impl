@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decision-agent-stub
+  labels: { app.kubernetes.io/name: decision-agent-stub }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: decision-agent-stub }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: decision-agent-stub }
+    spec:
+      containers:
+        - name: decision-agent-stub
+          image: decision-agent-stub:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: DECISION_AGENT_STUB_MQTT_HOST
+              value: mosquitto
+            - name: DECISION_AGENT_STUB_MQTT_USERNAME
+              value: eirvah
+            - name: DECISION_AGENT_STUB_MQTT_PASSWORD
+              value: eirvah-dev-password
+            - name: DECISION_AGENT_STUB_AMQP_URL
+              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+          resources:
+            requests: { cpu: "10m", memory: "64Mi" }
+            limits:   { cpu: "100m", memory: "128Mi" }

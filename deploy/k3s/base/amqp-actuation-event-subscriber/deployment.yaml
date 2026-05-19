@@ -1,32 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mqtt-uns-publisher
-  labels: { app.kubernetes.io/name: mqtt-uns-publisher }
+  name: amqp-actuation-event-subscriber
+  labels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
 spec:
   replicas: 1
   selector:
-    matchLabels: { app.kubernetes.io/name: mqtt-uns-publisher }
+    matchLabels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
   template:
     metadata:
-      labels: { app.kubernetes.io/name: mqtt-uns-publisher }
+      labels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
       annotations:
         eirvah.uniza/scrape: "true"
         eirvah.uniza/scrape-port: "8080"
     spec:
       containers:
-        - name: mqtt-uns-publisher
-          image: mqtt-uns-publisher:local
+        - name: amqp-actuation-event-subscriber
+          image: amqp-actuation-event-subscriber:local
           imagePullPolicy: IfNotPresent
           env:
-            - name: MQTT_UNS_PUBLISHER_NATS_SERVERS
+            - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_NATS_SERVERS
               value: '["nats://nats:4222"]'
-            - name: MQTT_UNS_PUBLISHER_MQTT_HOST
-              value: mosquitto
-            - name: MQTT_UNS_PUBLISHER_MQTT_USERNAME
-              value: eirvah
-            - name: MQTT_UNS_PUBLISHER_MQTT_PASSWORD
-              value: eirvah-dev-password
+            - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_AMQP_URL
+              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
           ports:
             - { name: http, containerPort: 8080 }
           readinessProbe:

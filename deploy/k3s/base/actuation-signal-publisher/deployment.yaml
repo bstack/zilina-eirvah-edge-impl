@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actuation-signal-publisher
+  labels: { app.kubernetes.io/name: actuation-signal-publisher }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: actuation-signal-publisher }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: actuation-signal-publisher }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: actuation-signal-publisher
+          image: actuation-signal-publisher:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ACTUATION_SIGNAL_PUBLISHER_NATS_SERVERS
+              value: '["nats://nats:4222"]'
+            - name: ACTUATION_SIGNAL_PUBLISHER_ENTERPRISE
+              value: uniza
+            - name: ACTUATION_SIGNAL_PUBLISHER_SITE
+              value: zilina
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - name: config
+              mountPath: /etc/actuation-signal-publisher
+              readOnly: true
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "10m", memory: "64Mi" }
+            limits:   { cpu: "100m", memory: "128Mi" }
+      volumes:
+        - name: config
+          configMap:
+            name: actuation-signal-publisher-config

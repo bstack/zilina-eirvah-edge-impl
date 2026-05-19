@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: actuation-control-orchestrator
+  labels: { app.kubernetes.io/name: actuation-control-orchestrator }
+spec:
+  selector: { app.kubernetes.io/name: actuation-control-orchestrator }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }

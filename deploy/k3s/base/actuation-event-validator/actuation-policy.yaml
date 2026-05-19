@@ -1,0 +1,6 @@
+# Per-node actuation policy for actuation-event-validator (spec §3.2).
+policies:
+  - uns_topic: "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature"
+    allowed_range: [20.0, 30.0]
+    allowlist:
+      - decision-agent-stub
