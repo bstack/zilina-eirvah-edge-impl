@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actuation-event-validator
+  labels: { app.kubernetes.io/name: actuation-event-validator }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: actuation-event-validator }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: actuation-event-validator }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: actuation-event-validator
+          image: actuation-event-validator:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ACTUATION_EVENT_VALIDATOR_NATS_SERVERS
+              value: '["nats://nats:4222"]'
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - name: config
+              mountPath: /etc/actuation-event-validator
+              readOnly: true
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "10m", memory: "64Mi" }
+            limits:   { cpu: "100m", memory: "128Mi" }
+      volumes:
+        - name: config
+          configMap:
+            name: actuation-event-validator-config

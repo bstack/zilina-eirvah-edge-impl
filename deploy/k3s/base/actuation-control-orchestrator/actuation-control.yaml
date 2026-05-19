@@ -1,0 +1,9 @@
+# Pipeline stage definitions for actuation-control-orchestrator (spec §3.2).
+stages:
+  - name: validate
+    subject: act.work.validate
+    timeout_s: 2.0
+  - name: write_signal
+    subject: act.work.write_signal
+    timeout_s: 5.0
+dlq_subject: act.dlq.rejected

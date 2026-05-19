@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rabbitmq-config
+data:
+  rabbitmq.conf: |
+    loopback_users.guest = false
+    load_definitions = /etc/rabbitmq/definitions.json
+    listeners.tcp.default = 5672
+    management.tcp.port = 15672
+    prometheus.tcp.port = 15692
+  enabled_plugins: |
+    [rabbitmq_management,rabbitmq_prometheus].
+  definitions.json: |
+    {
+      "users": [
+        {"name": "eirvah", "password": "eirvah-dev-password", "tags": "administrator"}
+      ],
+      "vhosts": [{"name": "/"}],
+      "permissions": [
+        {"user": "eirvah", "vhost": "/", "configure": ".*", "write": ".*", "read": ".*"}
+      ],
+      "queues": [
+        {"name": "eirvah.actuation.requests", "vhost": "/",
+         "durable": true, "auto_delete": false, "arguments": {}}
+      ],
+      "exchanges": [
+        {"name": "eirvah.actuation.results", "vhost": "/",
+         "type": "topic", "durable": true, "auto_delete": false, "arguments": {}}
+      ],
+      "bindings": []
+    }

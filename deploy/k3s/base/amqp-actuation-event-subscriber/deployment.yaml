@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amqp-actuation-event-subscriber
+  labels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: amqp-actuation-event-subscriber
+          image: amqp-actuation-event-subscriber:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_NATS_SERVERS
+              value: '["nats://nats:4222"]'
+            - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_AMQP_URL
+              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "10m", memory: "64Mi" }
+            limits:   { cpu: "100m", memory: "128Mi" }

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: amqp-actuation-event-subscriber
+  labels: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
+spec:
+  selector: { app.kubernetes.io/name: amqp-actuation-event-subscriber }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }

@@ -1,0 +1,10 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]  # let formatter handle line length
+
+[format]
+quote-style = "double"
+indent-style = "space"

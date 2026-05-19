@@ -1,0 +1,42 @@
+# Maps OPC UA node aliases to ISA-95 UNS paths (spec §4.1, §3.1).
+# enterprise and site are injected at runtime via UNS_AUTO_CONTEXTUALIZER_ENTERPRISE / _SITE env vars.
+mappings:
+  - node_id: "Bottler.Temperature01"
+    area: factory1
+    line: line_a
+    cell: bottler
+    equipment: temperature_sensor_01
+    measurement: temperature
+    semantic_type: temperature.celsius
+
+  - node_id: "Bottler.ThroughputMeter01"
+    area: factory1
+    line: line_a
+    cell: bottler
+    equipment: throughput_meter_01
+    measurement: throughput
+    semantic_type: flow.bps
+
+  - node_id: "Bottler.Motor01.State"
+    area: factory1
+    line: line_a
+    cell: bottler
+    equipment: motor_01
+    measurement: state
+    semantic_type: state.enum
+
+  - node_id: "Bottler.Motor01.Rpm"
+    area: factory1
+    line: line_a
+    cell: bottler
+    equipment: motor_01
+    measurement: rpm
+    semantic_type: rotational_speed.rpm
+
+  - node_id: "Bottler.SetpointUnit.SetpointTemperature"
+    area: factory1
+    line: line_a
+    cell: bottler
+    equipment: setpoint_unit
+    measurement: setpoint_temperature
+    semantic_type: setpoint.target

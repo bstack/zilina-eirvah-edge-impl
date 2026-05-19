@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actuation-control-orchestrator
+  labels: { app.kubernetes.io/name: actuation-control-orchestrator }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: actuation-control-orchestrator }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: actuation-control-orchestrator }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: actuation-control-orchestrator
+          image: actuation-control-orchestrator:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: ACTUATION_CONTROL_ORCHESTRATOR_NATS_SERVERS
+              value: '["nats://nats:4222"]'
+            - name: ACTUATION_CONTROL_ORCHESTRATOR_AMQP_URL
+              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+            - name: ACTUATION_CONTROL_ORCHESTRATOR_ALLOW_WRITES
+              value: "false"
+          ports:
+            - { name: http, containerPort: 8080 }
+          volumeMounts:
+            - name: config
+              mountPath: /etc/actuation-control-orchestrator
+              readOnly: true
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "25m", memory: "128Mi" }
+            limits:   { cpu: "200m", memory: "256Mi" }
+      volumes:
+        - name: config
+          configMap:
+            name: actuation-control-orchestrator-config

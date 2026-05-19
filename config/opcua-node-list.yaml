@@ -1,0 +1,15 @@
+# OPC UA node browse config for opcua-data-subscriber (spec §3.1)
+endpoint: "opc.tcp://opcua-simulator:4840/eirvah/simulator"
+namespace_uri: "https://eirvah.uniza/zilina/factory1"
+publishing_interval_ms: 500
+nodes:
+  - browse_names: ["bottler", "Temperature"]
+    alias: "Bottler.Temperature01"
+  - browse_names: ["bottler", "Throughput"]
+    alias: "Bottler.ThroughputMeter01"
+  - browse_names: ["bottler", "State"]
+    alias: "Bottler.Motor01.State"
+  - browse_names: ["bottler", "Rpm"]
+    alias: "Bottler.Motor01.Rpm"
+  - browse_names: ["bottler", "SetpointTemperature"]
+    alias: "Bottler.SetpointUnit.SetpointTemperature"

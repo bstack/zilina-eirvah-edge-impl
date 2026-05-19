@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: decision-agent-stub
+  labels: { app.kubernetes.io/name: decision-agent-stub }
+spec:
+  selector: { app.kubernetes.io/name: decision-agent-stub }
+  ports:
+    - { name: http, port: 8080, targetPort: 8080 }

@@ -1,0 +1,12 @@
+# Pipeline stage definitions for uns-contextualizer-orchestrator (spec §3.1).
+stages:
+  - name: convert
+    subject: uns.work.convert
+    timeout_s: 2.0
+  - name: contextualize
+    subject: uns.work.contextualize
+    timeout_s: 2.0
+  - name: publish
+    subject: uns.work.publish
+    timeout_s: 2.0
+dlq_subject: uns.dlq.telemetry

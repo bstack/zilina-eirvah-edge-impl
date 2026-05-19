@@ -1,0 +1,69 @@
+[project]
+name = "eirvah-edge-code"
+version = "0.0.0"
+description = "EirVah Edge Integration Layer — vertical slice"
+requires-python = ">=3.12"
+authors = [{ name = "William Francis Stack" }]
+license = { text = "Apache-2.0" }
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = [
+    "libs/eirvah-contracts",
+    "libs/eirvah-bus",
+    "libs/eirvah-observability",
+    "services/opcua-simulator",
+    "services/opcua-data-subscriber",
+    "services/data-converter",
+    "services/uns-auto-contextualizer",
+    "services/mqtt-uns-publisher",
+    "services/uns-contextualizer-orchestrator",
+    "services/amqp-actuation-event-subscriber",
+    "services/actuation-control-orchestrator",
+    "services/actuation-event-validator",
+    "services/actuation-signal-publisher",
+    "services/decision-agent-stub",
+]
+
+[tool.uv.sources]
+eirvah-contracts                = { workspace = true }
+eirvah-bus                      = { workspace = true }
+eirvah-observability            = { workspace = true }
+opcua-simulator                 = { workspace = true }
+opcua-data-subscriber           = { workspace = true }
+data-converter                  = { workspace = true }
+uns-auto-contextualizer         = { workspace = true }
+mqtt-uns-publisher              = { workspace = true }
+uns-contextualizer-orchestrator          = { workspace = true }
+amqp-actuation-event-subscriber          = { workspace = true }
+actuation-control-orchestrator           = { workspace = true }
+actuation-event-validator                = { workspace = true }
+actuation-signal-publisher               = { workspace = true }
+decision-agent-stub                      = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "eirvah-contracts",
+    "eirvah-bus",
+    "eirvah-observability",
+    "opcua-simulator",
+    "opcua-data-subscriber",
+    "data-converter",
+    "uns-auto-contextualizer",
+    "mqtt-uns-publisher",
+    "uns-contextualizer-orchestrator",
+    "amqp-actuation-event-subscriber",
+    "actuation-control-orchestrator",
+    "actuation-event-validator",
+    "actuation-signal-publisher",
+    "decision-agent-stub",
+    "aio-pika>=9.0",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "aiomqtt>=2.0",
+]
