@@ -1,0 +1,25 @@
+[project]
+name = "actuation-signal-publisher"
+version = "0.0.0"
+description = "Resolves UNS topic to OPC UA node and writes value (spec §3.2)."
+requires-python = ">=3.12"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "asyncua>=1.0",
+    "nats-py>=2.7",
+    "pydantic>=2.8",
+    "pydantic-settings>=2.5",
+    "pyyaml>=6.0",
+    "structlog>=24.0",
+    "uvicorn>=0.30",
+    "eirvah-contracts",
+    "eirvah-bus",
+    "eirvah-observability",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/actuation_signal_publisher"]
