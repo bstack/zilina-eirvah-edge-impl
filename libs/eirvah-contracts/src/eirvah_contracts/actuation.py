@@ -12,6 +12,13 @@ from eirvah_contracts.ulid import is_valid_correlation_id
 from eirvah_contracts.uns import parse_uns_topic
 
 
+class ValidationResult(BaseModel):
+    """Returned by actuation-event-validator on act.work.validate (spec §3.2)."""
+
+    decision: Literal["approve", "reject"]
+    reason: str | None = None
+
+
 class ActuationRequest(BaseModel):
     """AMQP payload on ``eirvah.actuation.requests`` (spec §4.3)."""
 

@@ -65,3 +65,24 @@ def test_request_rejects_malformed_target_uns_topic() -> None:
     raw["target_uns_topic"] = "too/few/segments"
     with pytest.raises(ValueError):
         ActuationRequest.model_validate(raw)
+
+
+def test_validation_result_approve() -> None:
+    from eirvah_contracts.actuation import ValidationResult
+    r = ValidationResult(decision="approve")
+    assert r.decision == "approve"
+    assert r.reason is None
+
+
+def test_validation_result_reject_with_reason() -> None:
+    from eirvah_contracts.actuation import ValidationResult
+    r = ValidationResult(decision="reject", reason="value 99.0 outside policy range [20.0, 30.0]")
+    assert r.decision == "reject"
+    assert "99.0" in (r.reason or "")
+
+
+def test_validation_result_rejects_unknown_decision() -> None:
+    from eirvah_contracts.actuation import ValidationResult
+    import pytest
+    with pytest.raises(Exception):
+        ValidationResult(decision="maybe")
