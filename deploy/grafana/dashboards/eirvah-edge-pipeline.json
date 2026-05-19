@@ -174,6 +174,39 @@
           "refId": "B"
         }
       ]
+    },
+    {
+      "type": "row",
+      "title": "Actuation Path",
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 20},
+      "id": 20,
+      "collapsed": false
+    },
+    {
+      "type": "stat",
+      "title": "Actuation Approved",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 21},
+      "id": 21,
+      "targets": [{"expr": "sum(increase(eirvah_actuation_approved_total{path=\"actuation\"}[5m]))", "legendFormat": "approved"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "area"}
+    },
+    {
+      "type": "stat",
+      "title": "Actuation Rejected",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 21},
+      "id": 22,
+      "targets": [{"expr": "sum by (reason)(increase(eirvah_actuation_rejected_total{path=\"actuation\"}[5m]))", "legendFormat": "{{ reason }}"}],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value"}
+    },
+    {
+      "type": "timeseries",
+      "title": "Actuation E2E Latency (p50/p95)",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 21},
+      "id": 23,
+      "targets": [
+        {"expr": "histogram_quantile(0.50, rate(eirvah_actuation_e2e_latency_seconds_bucket{path=\"actuation\"}[5m]))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, rate(eirvah_actuation_e2e_latency_seconds_bucket{path=\"actuation\"}[5m]))", "legendFormat": "p95"}
+      ]
     }
   ],
   "refresh": "10s",
