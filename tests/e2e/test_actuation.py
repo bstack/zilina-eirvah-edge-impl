@@ -45,25 +45,13 @@ def _build_request(
     )
 
 
-async def _publish_request(amqp_url: str, req: ActuationRequest) -> None:
-    connection = await aio_pika.connect_robust(amqp_url)
-    async with connection:
-        channel = await connection.channel()
-        await channel.default_exchange.publish(
-            aio_pika.Message(
-                body=req.model_dump_json().encode(),
-                delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-            ),
-            routing_key=AMQP_REQUESTS_QUEUE,
-        )
-
-
-async def _consume_result(
+async def _run_actuation(
     amqp_url: str,
+    req: ActuationRequest,
     *,
     timeout_s: float = 15.0,
 ) -> dict[str, Any]:
-    """Bind a temp queue to the results exchange, return first message."""
+    """Bind result queue FIRST, publish request, then wait for result."""
     connection = await aio_pika.connect_robust(amqp_url)
     async with connection:
         channel = await connection.channel()
@@ -74,6 +62,16 @@ async def _consume_result(
         )
         result_queue = await channel.declare_queue("", exclusive=True)
         await result_queue.bind(exchange, routing_key="#")
+
+        # Publish AFTER binding so we never miss the result
+        await channel.default_exchange.publish(
+            aio_pika.Message(
+                body=req.model_dump_json().encode(),
+                delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+            ),
+            routing_key=AMQP_REQUESTS_QUEUE,
+        )
+
         try:
             async with asyncio.timeout(timeout_s):
                 async with result_queue.iterator() as q:
@@ -102,8 +100,7 @@ async def _read_opcua_setpoint(cluster: "EirVahCluster") -> float:
 async def test_actuation_full_loop(eirvah_cluster: "EirVahCluster") -> None:
     """Full CPS loop: request → approve → OPC UA write → setpoint changes."""
     req = _build_request(value=_VALID_REQUEST_VALUE)
-    await _publish_request(eirvah_cluster.amqp_url, req)
-    result = await _consume_result(eirvah_cluster.amqp_url, timeout_s=15.0)
+    result = await _run_actuation(eirvah_cluster.amqp_url, req, timeout_s=15.0)
 
     assert result.get("decision") == "approve", (
         f"Expected approve, got: {result}"
@@ -120,8 +117,7 @@ async def test_actuation_full_loop(eirvah_cluster: "EirVahCluster") -> None:
 async def test_actuation_rejection_policy(eirvah_cluster: "EirVahCluster") -> None:
     """Value outside allowed_range [20.0, 30.0] → reject with policy reason."""
     req = _build_request(value=_OUT_OF_RANGE_VALUE)
-    await _publish_request(eirvah_cluster.amqp_url, req)
-    result = await _consume_result(eirvah_cluster.amqp_url, timeout_s=10.0)
+    result = await _run_actuation(eirvah_cluster.amqp_url, req, timeout_s=10.0)
 
     assert result.get("decision") == "reject", (
         f"Expected reject, got: {result}"
@@ -136,8 +132,7 @@ async def test_actuation_rejection_writes_disabled(
 ) -> None:
     """With allow_writes=false (default), any valid request → writes_disabled."""
     req = _build_request(value=_VALID_REQUEST_VALUE)
-    await _publish_request(eirvah_cluster.amqp_url, req)
-    result = await _consume_result(eirvah_cluster.amqp_url, timeout_s=10.0)
+    result = await _run_actuation(eirvah_cluster.amqp_url, req, timeout_s=10.0)
 
     assert result.get("decision") == "reject"
     assert result.get("rejection_reason") == "writes_disabled"
@@ -148,8 +143,7 @@ async def test_actuation_deadline_expired(
 ) -> None:
     """Request with past deadline → reject with reason 'expired'."""
     req = _build_request(value=_VALID_REQUEST_VALUE, deadline_offset_s=-5.0)
-    await _publish_request(eirvah_cluster.amqp_url, req)
-    result = await _consume_result(eirvah_cluster.amqp_url, timeout_s=10.0)
+    result = await _run_actuation(eirvah_cluster.amqp_url, req, timeout_s=10.0)
 
     assert result.get("decision") == "reject"
     assert result.get("rejection_reason") == "expired"
