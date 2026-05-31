@@ -5,6 +5,11 @@ Two experiments: (A) CPS loop closes end-to-end, (B) pod failure & recovery.
 
 **Prerequisites:** Docker, kind, kubectl, uv installed and on PATH.
 
+> **Safety gate note:** The base deployment has `ACTUATION_CONTROL_ORCHESTRATOR_ALLOW_WRITES=false`
+> by design (ADR 0001). The `local` overlay patches this to `true` so actuation writes reach
+> the OPC UA simulator. Lab and production overlays should keep it `false` until explicitly
+> enabled for a test run.
+
 ---
 
 ## 0. Start the stack
@@ -87,7 +92,7 @@ Run the disturbance script and wait for at least one full CPS cycle to complete 
 ### Step 2 — Kill the data-converter pod
 
 ```bash
-kubectl -n eirvah-edge delete pod -l app=data-converter
+kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=data-converter
 ```
 
 Kubernetes immediately schedules a replacement. The `uns-contextualizer-orchestrator` will start timing out the `uns.work.convert` stage and incrementing `eirvah_pipeline_stage_errors_total{stage="convert"}`.
@@ -113,8 +118,8 @@ Capture a screenshot showing metrics returning to baseline.
 The same procedure applies to any stateless worker:
 
 ```bash
-kubectl -n eirvah-edge delete pod -l app=actuation-event-validator
-kubectl -n eirvah-edge delete pod -l app=actuation-signal-publisher
+kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=actuation-event-validator
+kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=actuation-signal-publisher
 ```
 
 ---

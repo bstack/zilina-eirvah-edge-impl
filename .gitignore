@@ -155,6 +155,7 @@ cython_debug/
 # Project artifacts
 *.local
 local/
+!deploy/k3s/overlays/local/
 data/
 secrets/
 

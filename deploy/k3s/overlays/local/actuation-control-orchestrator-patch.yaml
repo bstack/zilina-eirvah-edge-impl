@@ -1,0 +1,12 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: actuation-control-orchestrator
+spec:
+  template:
+    spec:
+      containers:
+        - name: actuation-control-orchestrator
+          env:
+            - name: ACTUATION_CONTROL_ORCHESTRATOR_ALLOW_WRITES
+              value: "true"
