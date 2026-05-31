@@ -42,7 +42,7 @@
       "targets": [
         {
           "datasource": { "type": "prometheus", "uid": "eirvah-prometheus" },
-          "expr": "rate(eirvah_pipeline_success_total{path=\"telemetry\"}[1m]) / (rate(eirvah_pipeline_success_total{path=\"telemetry\"}[1m]) + sum(rate(eirvah_pipeline_stage_timeout_total{path=\"telemetry\"}[1m])) + sum(rate(eirvah_pipeline_stage_error_total{path=\"telemetry\"}[1m])) + 1e-9)",
+          "expr": "rate(eirvah_pipeline_success_total{path=\"telemetry\"}[1m]) / (rate(eirvah_pipeline_success_total{path=\"telemetry\"}[1m]) + sum(rate(eirvah_pipeline_stage_timeout_total{path=\"telemetry\"}[1m]) or vector(0)) + sum(rate(eirvah_pipeline_stage_error_total{path=\"telemetry\"}[1m]) or vector(0)) + 1e-9)",
           "legendFormat": "success rate",
           "refId": "A"
         }
