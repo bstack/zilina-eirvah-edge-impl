@@ -18,6 +18,8 @@ members = [
     "eirvah-contracts",
     "eirvah-edge-code",
     "eirvah-observability",
+    "modbus-data-subscriber",
+    "modbus-simulator",
     "mqtt-uns-publisher",
     "opcua-data-subscriber",
     "opcua-simulator",
@@ -525,6 +527,8 @@ dev = [
     { name = "eirvah-contracts" },
     { name = "eirvah-observability" },
     { name = "httpx" },
+    { name = "modbus-data-subscriber" },
+    { name = "modbus-simulator" },
     { name = "mqtt-uns-publisher" },
     { name = "mypy" },
     { name = "opcua-data-subscriber" },
@@ -552,6 +556,8 @@ dev = [
     { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
     { name = "eirvah-observability", editable = "libs/eirvah-observability" },
     { name = "httpx", specifier = ">=0.27" },
+    { name = "modbus-data-subscriber", editable = "services/modbus-data-subscriber" },
+    { name = "modbus-simulator", editable = "services/modbus-simulator" },
     { name = "mqtt-uns-publisher", editable = "services/mqtt-uns-publisher" },
     { name = "mypy", specifier = ">=1.11" },
     { name = "opcua-data-subscriber", editable = "services/opcua-data-subscriber" },
@@ -693,6 +699,60 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/15/1f/dc6771a52592a4451be6effa200cbfc9cec61e4393d3033d81a9d307961d/librt-0.11.0-cp314-cp314t-win32.whl", hash = "sha256:2b481d846ac894c4e8403c5fd0e87c5d11d6499e404b474602508a224ff531c8", size = 103562, upload-time = "2026-05-10T18:17:03.99Z" },
     { url = "https://files.pythonhosted.org/packages/62/4a/7d1415567027286a75ba1093ec4aca11f073e0f559c530cf3e0a757ad55c/librt-0.11.0-cp314-cp314t-win_amd64.whl", hash = "sha256:28edb433edde181112a908c78907af28f964eabc15f4dd16c9d66c834302677c", size = 124327, upload-time = "2026-05-10T18:17:05.465Z" },
     { url = "https://files.pythonhosted.org/packages/ce/62/b40b382fa0c66fee1478073eb8db352a4a6beda4a1adccf1df911d8c289c/librt-0.11.0-cp314-cp314t-win_arm64.whl", hash = "sha256:dee008f20b542e3cd162ba338a7f9ec0f6d23d395f66fe8aeeec3c9d067ea253", size = 102572, upload-time = "2026-05-10T18:17:06.809Z" },
+]
+
+[[package]]
+name = "modbus-data-subscriber"
+version = "0.0.0"
+source = { editable = "services/modbus-data-subscriber" }
+dependencies = [
+    { name = "eirvah-bus" },
+    { name = "eirvah-contracts" },
+    { name = "eirvah-observability" },
+    { name = "nats-py" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pymodbus" },
+    { name = "pyyaml" },
+    { name = "structlog" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "eirvah-bus", editable = "libs/eirvah-bus" },
+    { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
+    { name = "eirvah-observability", editable = "libs/eirvah-observability" },
+    { name = "nats-py", specifier = ">=2.7" },
+    { name = "pydantic", specifier = ">=2.8" },
+    { name = "pydantic-settings", specifier = ">=2.5" },
+    { name = "pymodbus", specifier = ">=3.6,<3.8" },
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "structlog", specifier = ">=24.0" },
+    { name = "uvicorn", specifier = ">=0.30" },
+]
+
+[[package]]
+name = "modbus-simulator"
+version = "0.0.0"
+source = { editable = "services/modbus-simulator" }
+dependencies = [
+    { name = "eirvah-observability" },
+    { name = "pydantic" },
+    { name = "pydantic-settings" },
+    { name = "pymodbus" },
+    { name = "structlog" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "eirvah-observability", editable = "libs/eirvah-observability" },
+    { name = "pydantic", specifier = ">=2.8" },
+    { name = "pydantic-settings", specifier = ">=2.5" },
+    { name = "pymodbus", specifier = ">=3.6,<3.8" },
+    { name = "structlog", specifier = ">=24.0" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
 
 [[package]]
@@ -1209,6 +1269,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c3/b2/bc9c9196916376152d655522fdcebac55e66de6603a76a02bca1b6414f6c/pygments-2.20.0.tar.gz", hash = "sha256:6757cd03768053ff99f3039c1a36d6c0aa0b263438fcab17520b30a303a82b5f", size = 4955991, upload-time = "2026-03-29T13:29:33.898Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/7e/a72dd26f3b0f4f2bf1dd8923c85f7ceb43172af56d63c7383eb62b332364/pygments-2.20.0-py3-none-any.whl", hash = "sha256:81a9e26dd42fd28a23a2d169d86d7ac03b46e2f8b59ed4698fb4785f946d0176", size = 1231151, upload-time = "2026-03-29T13:29:30.038Z" },
+]
+
+[[package]]
+name = "pymodbus"
+version = "3.7.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/bc/f98789706351e778676a3e84ed6203160c4f581092e298eb075bc9e08230/pymodbus-3.7.4.tar.gz", hash = "sha256:573c370aea04523403eea1e159616a583cd7b93cfc5c81b07340d3cccd52c99f", size = 170675, upload-time = "2024-10-22T10:27:16.338Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/0a/b57434ae7ecc83a854f0431a380964a575a6474197211d2bae3fa0529484/pymodbus-3.7.4-py3-none-any.whl", hash = "sha256:dfb45ef9a2c1663875ad32378f780b5824628cd3c0a486851e64b8a3341a3e82", size = 173104, upload-time = "2024-10-22T10:27:14.789Z" },
 ]
 
 [[package]]

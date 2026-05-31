@@ -5,7 +5,7 @@ description = "Modbus TCP → NATS ingress subscriber (second-slice protocol ada
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 dependencies = [
-    "pymodbus>=3.7",
+    "pymodbus>=3.6,<3.8",
     "nats-py>=2.7",
     "pydantic>=2.8",
     "pydantic-settings>=2.5",

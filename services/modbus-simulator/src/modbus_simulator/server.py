@@ -11,9 +11,9 @@ import uvicorn
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from pymodbus.datastore import (
-    ModbusDeviceContext,
     ModbusSequentialDataBlock,
     ModbusServerContext,
+    ModbusSlaveContext,
 )
 from pymodbus.server import StartAsyncTcpServer
 
@@ -62,10 +62,10 @@ class SimulatorRuntime:
         return self._ready
 
     def _build_context(self) -> ModbusServerContext:
-        store = ModbusDeviceContext(
+        store = ModbusSlaveContext(
             hr=ModbusSequentialDataBlock(0, self._block.as_list() + [0] * 6),
         )
-        return ModbusServerContext(devices={self._settings.unit_id: store}, single=False)
+        return ModbusServerContext(slaves={self._settings.unit_id: store}, single=False)
 
     async def _tick_loop(self) -> None:
         interval = self._settings.tick_rate_ms / 1000.0
