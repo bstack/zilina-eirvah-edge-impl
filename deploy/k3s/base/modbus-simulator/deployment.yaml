@@ -22,11 +22,11 @@ spec:
             - name: MODBUS_SIMULATOR_HOST
               value: "0.0.0.0"
             - name: MODBUS_SIMULATOR_PORT
-              value: "502"
+              value: "5020"
             - name: MODBUS_SIMULATOR_TICK_RATE_MS
               value: "500"
           ports:
-            - { name: modbus, containerPort: 502 }
+            - { name: modbus, containerPort: 5020 }
             - { name: http, containerPort: 8080 }
           readinessProbe:
             httpGet: { path: /readyz, port: 8080 }

@@ -1,6 +1,6 @@
 # Register map for modbus-data-subscriber (mirrors bottling-line address space)
 host: modbus-simulator
-port: 502
+port: 5020
 unit_id: 1
 poll_interval_ms: 500
 registers:

@@ -6,5 +6,5 @@ metadata:
 spec:
   selector: { app.kubernetes.io/name: modbus-simulator }
   ports:
-    - { name: modbus, port: 502, targetPort: 502 }
+    - { name: modbus, port: 5020, targetPort: 5020 }
     - { name: http, port: 8080, targetPort: 8080 }

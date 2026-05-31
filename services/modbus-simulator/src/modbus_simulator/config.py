@@ -13,7 +13,7 @@ class SimulatorSettings(BaseSettings):
     )
 
     host: str = "0.0.0.0"
-    port: int = Field(default=502, ge=1, le=65535)
+    port: int = Field(default=5020, ge=1024, le=65535)
     unit_id: int = Field(default=1, ge=1, le=247)
     tick_rate_ms: int = Field(default=500, ge=50, le=10000)
     seed: int = 0
