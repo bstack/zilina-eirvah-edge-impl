@@ -18,6 +18,7 @@ OPCUA_LOCAL_PORT = 14840
 PROM_LOCAL_PORT = 19090
 AMQP_LOCAL_PORT = 25672
 AMQP_URL = f"amqp://eirvah:eirvah-dev-password@localhost:{AMQP_LOCAL_PORT}/"
+MODBUS_LOCAL_PORT = 5020
 
 
 def _cluster_is_up() -> bool:
