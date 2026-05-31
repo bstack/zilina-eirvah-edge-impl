@@ -34,6 +34,23 @@ def test_register_block_tick_changes_temperature() -> None:
     import random
     rng = random.Random(42)
     block = RegisterBlock()
-    original = block.temperature_raw
     block.tick(rng=rng, delta_max=50)
     assert 1800 <= block.temperature_raw <= 5000
+
+
+def test_register_block_tick_clamps_at_floor() -> None:
+    import random
+    rng = random.Random(0)
+    block = RegisterBlock(temperature_raw=1800)
+    for _ in range(20):
+        block.tick(rng=rng, delta_max=500)
+    assert block.temperature_raw >= 1800
+
+
+def test_register_block_tick_clamps_at_ceiling() -> None:
+    import random
+    rng = random.Random(0)
+    block = RegisterBlock(temperature_raw=5000)
+    for _ in range(20):
+        block.tick(rng=rng, delta_max=500)
+    assert block.temperature_raw <= 5000

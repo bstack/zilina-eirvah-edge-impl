@@ -44,7 +44,8 @@ class RegisterBlock:
         return [self.temperature_raw, self.setpoint_raw, self.motor_state, self.throughput_raw]
 
     def tick(self, *, rng: random.Random, delta_max: int = 50) -> None:
-        delta = rng.randint(-delta_max, delta_max)
+        span = abs(delta_max)
+        delta = rng.randint(-span, span)
         self.temperature_raw = max(1800, min(5000, self.temperature_raw + delta))
 
 
