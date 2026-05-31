@@ -83,11 +83,19 @@ Capture in Grafana:
 
 ## Experiment B — Pod failure and recovery
 
-**What you're showing:** the pipeline detects a worker failure, the orchestrator emits dead-letter events, the pod restarts, and the pipeline recovers — all observable in Grafana.
+**What you're showing:** Kubernetes replaces a killed worker pod and the pipeline continues without operator intervention.
+
+> **Local vs lab behaviour:** On kind with cached images, pod restart completes in ~1–2 s — faster
+> than the 2 s NATS stage timeout. The pipeline shows no visible dip in throughput.
+> On lab hardware with a registry pull (30–60 s restart), the timeout fires and errors accumulate
+> before recovery. Local runs demonstrate *that* the system recovers; lab runs demonstrate
+> *how long* it takes and what the error signal looks like.
 
 ### Step 1 — Establish a baseline
 
-Run the disturbance script and wait for at least one full CPS cycle to complete (verify in Grafana). Confirm error counters are zero.
+Open Grafana and navigate to the **EirVah Edge Pipeline** dashboard.
+
+Note the steady-state value of `eirvah_pipeline_success_total` (rate ~29 events/s on local).
 
 ### Step 2 — Kill the data-converter pod
 
@@ -95,25 +103,22 @@ Run the disturbance script and wait for at least one full CPS cycle to complete 
 kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=data-converter
 ```
 
-Kubernetes immediately schedules a replacement. The `uns-contextualizer-orchestrator` will start timing out the `uns.work.convert` stage and incrementing `eirvah_pipeline_stage_errors_total{stage="convert"}`.
+### Step 3 — Observe recovery
 
-### Step 3 — Observe failure
+```bash
+kubectl -n eirvah-edge get pod -l app.kubernetes.io/name=data-converter -w
+```
+
+Watch the replacement pod reach `Running`. On local kind: ~15–30 s. On lab hardware: 30–90 s
+depending on image pull time.
 
 In Grafana, watch:
-- `eirvah_pipeline_stage_errors_total{stage="convert"}` — increments during downtime
-- `eirvah_dlq_events_total{queue="uns.dlq.telemetry"}` — DLQ events accumulate
+- `eirvah_pipeline_success_total` — may show a brief dip on lab hardware; stays flat on local
+- `eirvah_pipeline_e2e_latency_seconds` — latency histogram; look for a spike during downtime
 
-Capture a screenshot showing error counters rising.
+Capture a screenshot showing the pod replacement and metrics behaviour.
 
-### Step 4 — Observe recovery
-
-The new `data-converter` pod reaches Running in ~10–20 s. After it is ready:
-- Error counter stops incrementing
-- Normal pipeline latency resumes
-
-Capture a screenshot showing metrics returning to baseline.
-
-### Step 5 — Repeat for other workers (optional)
+### Step 4 — Repeat for other workers (optional)
 
 The same procedure applies to any stateless worker:
 
