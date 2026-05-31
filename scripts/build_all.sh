@@ -9,6 +9,8 @@ TAG="${1:-local}"
 SERVICES=(
   opcua-simulator
   opcua-data-subscriber
+  modbus-simulator
+  modbus-data-subscriber
   data-converter
   uns-auto-contextualizer
   mqtt-uns-publisher

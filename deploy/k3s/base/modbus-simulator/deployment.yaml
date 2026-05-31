@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: modbus-simulator
+  labels: { app.kubernetes.io/name: modbus-simulator }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: modbus-simulator }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: modbus-simulator }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: modbus-simulator
+          image: modbus-simulator:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MODBUS_SIMULATOR_HOST
+              value: "0.0.0.0"
+            - name: MODBUS_SIMULATOR_PORT
+              value: "502"
+            - name: MODBUS_SIMULATOR_TICK_RATE_MS
+              value: "500"
+          ports:
+            - { name: modbus, containerPort: 502 }
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "25m", memory: "64Mi" }
+            limits:   { cpu: "200m", memory: "128Mi" }

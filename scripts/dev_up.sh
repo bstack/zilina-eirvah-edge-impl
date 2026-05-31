@@ -12,6 +12,8 @@ NAMESPACE="eirvah-edge"
 SERVICES=(
   opcua-simulator
   opcua-data-subscriber
+  modbus-simulator
+  modbus-data-subscriber
   data-converter
   uns-auto-contextualizer
   mqtt-uns-publisher
@@ -51,6 +53,7 @@ echo "==> stack is up."
 echo "    Grafana:       kubectl -n ${NAMESPACE} port-forward svc/grafana 3000:3000"
 echo "    Prometheus:    kubectl -n ${NAMESPACE} port-forward svc/prometheus 9090:9090"
 echo "    OPC UA:        kubectl -n ${NAMESPACE} port-forward svc/opcua-simulator 4840:4840"
+echo "    Modbus:        kubectl -n ${NAMESPACE} port-forward svc/modbus-simulator 502:502"
 echo "    Mosquitto:     kubectl -n ${NAMESPACE} port-forward svc/mosquitto 1883:1883"
 echo "    NATS:          kubectl -n ${NAMESPACE} port-forward svc/nats 4222:4222"
 echo "    RabbitMQ:      kubectl -n ${NAMESPACE} port-forward svc/rabbitmq 15672:15672"

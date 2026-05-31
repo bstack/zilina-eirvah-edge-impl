@@ -10,6 +10,8 @@ resources:
   - grafana
   - opcua-simulator
   - opcua-data-subscriber
+  - modbus-simulator
+  - modbus-data-subscriber
   - data-converter
   - uns-auto-contextualizer
   - mqtt-uns-publisher

@@ -1,0 +1,22 @@
+# Register map for modbus-data-subscriber (mirrors bottling-line address space)
+host: modbus-simulator
+port: 502
+unit_id: 1
+poll_interval_ms: 500
+registers:
+  - address: 0
+    alias: "Bottler.Temperature01"
+    scale: 100.0
+    value_type: double
+  - address: 1
+    alias: "Bottler.SetpointUnit.SetpointTemperature"
+    scale: 100.0
+    value_type: double
+  - address: 2
+    alias: "Bottler.Motor01.State"
+    scale: 1.0
+    value_type: int64
+  - address: 3
+    alias: "Bottler.ThroughputMeter01"
+    scale: 100.0
+    value_type: double
