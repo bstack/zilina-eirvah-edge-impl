@@ -34,7 +34,7 @@ class RegisterConfig(BaseModel):
 
 class RegisterMapConfig(BaseModel):
     host: str
-    port: int = 502
+    port: int = 5020
     unit_id: int = 1
     poll_interval_ms: int = 500
     registers: list[RegisterConfig]
