@@ -118,9 +118,28 @@ In Grafana, watch:
 
 Capture a screenshot showing the pod replacement and metrics behaviour.
 
-### Step 4 — Repeat for other workers (optional)
+### Step 4 — Kill opcua-data-subscriber for a more visible result
 
-The same procedure applies to any stateless worker:
+Killing the data subscriber cuts off telemetry ingress at the source. On reconnect, the OPC UA
+server replays queued change notifications — producing a measurable throughput burst rather than
+a gap. Observable even on local kind.
+
+```bash
+kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=opcua-data-subscriber
+```
+
+Expected pattern in `rate(eirvah_pipeline_success_total[10s])`:
+
+| Time relative to kill | Observed behaviour |
+|---|---|
+| 0–5 s | Rate unchanged or minor dip (~28.8/s) |
+| ~10–25 s | Catch-up burst: 1.5–2× normal rate as OPC UA backlog drains |
+| ~30 s | Returns to steady state (~29/s) |
+
+This demonstrates zero data loss (OPC UA subscription buffers changes during downtime) and
+auto-recovery with no operator intervention.
+
+### Step 5 — Repeat for other workers (optional)
 
 ```bash
 kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=actuation-event-validator
