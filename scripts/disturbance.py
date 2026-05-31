@@ -13,7 +13,7 @@ Timing (default config, alpha=0.05, tick=500ms):
 
 Usage:
   uv run python scripts/disturbance.py
-  uv run python scripts/disturbance.py --disturbance 30.0 --interval 120 --endpoint opc.tcp://localhost:14840/eirvah/simulator
+  uv run python scripts/disturbance.py --disturbance 30.0 --interval 120 --endpoint opc.tcp://localhost:4840/eirvah/simulator
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ async def run(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="OPC UA setpoint disturbance injector")
-    parser.add_argument("--endpoint", default="opc.tcp://localhost:14840/eirvah/simulator")
+    parser.add_argument("--endpoint", default="opc.tcp://localhost:4840/eirvah/simulator")
     parser.add_argument("--namespace", default="https://eirvah.uniza/zilina/factory1")
     parser.add_argument("--disturbance", type=float, default=30.0, help="setpoint to inject (°C)")
     parser.add_argument("--interval", type=float, default=120.0, help="seconds between disturbances")
