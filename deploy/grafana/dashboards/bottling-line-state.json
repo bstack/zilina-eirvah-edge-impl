@@ -330,6 +330,451 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Conveyor (Modbus TCP)",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Belt speed (m/s)",
+      "gridPos": {
+        "x": 0,
+        "y": 30,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_belt_speed_meters_per_second",
+          "legendFormat": "belt speed",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Jam detected",
+      "gridPos": {
+        "x": 8,
+        "y": 30,
+        "w": 4,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_jam_detected",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "clear",
+                  "color": "green"
+                },
+                "1": {
+                  "text": "JAM",
+                  "color": "red"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "timeseries",
+      "title": "Bottle count (cumulative)",
+      "gridPos": {
+        "x": 12,
+        "y": 30,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_bottle_count_total",
+          "legendFormat": "bottles",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "type": "row",
+      "title": "Capper (Siemens S7)",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 31,
+      "type": "timeseries",
+      "title": "Cap torque (Nm)",
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_capper_torque_nm",
+          "legendFormat": "torque",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Nm",
+          "min": 0,
+          "max": 6
+        }
+      }
+    },
+    {
+      "id": 32,
+      "type": "stat",
+      "title": "Cap presence",
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_capper_cap_presence",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "absent",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "capped",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 33,
+      "type": "stat",
+      "title": "Capper rejects/min",
+      "gridPos": {
+        "x": 18,
+        "y": 37,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_capper_rejects_per_min",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 40,
+      "type": "row",
+      "title": "Reject Station (Modbus TCP)",
+      "gridPos": {
+        "x": 0,
+        "y": 43,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 41,
+      "type": "timeseries",
+      "title": "Reject count (cumulative)",
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_reject_count_total",
+          "legendFormat": "rejects",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 42,
+      "type": "stat",
+      "title": "Reject conveyor",
+      "gridPos": {
+        "x": 12,
+        "y": 44,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_conveyor_active",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "stopped",
+                  "color": "gray"
+                },
+                "1": {
+                  "text": "running",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 50,
+      "type": "row",
+      "title": "Vision Inspector (OPC UA)",
+      "gridPos": {
+        "x": 0,
+        "y": 50,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 51,
+      "type": "timeseries",
+      "title": "Good rate (%)",
+      "gridPos": {
+        "x": 0,
+        "y": 51,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_simulator_quality_rate_percent{cell=\"inspector\"}",
+          "legendFormat": "good rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 85,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 93,
+                "color": "yellow"
+              },
+              {
+                "value": 96,
+                "color": "green"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 52,
+      "type": "timeseries",
+      "title": "Reject rate (%)",
+      "gridPos": {
+        "x": 12,
+        "y": 51,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "100 - eirvah_simulator_quality_rate_percent{cell=\"inspector\"}",
+          "legendFormat": "reject rate",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 15
+        }
+      }
+    },
+    {
+      "id": 60,
+      "type": "row",
+      "title": "Labeler (OPC UA)",
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 61,
+      "type": "timeseries",
+      "title": "Label alignment score (%)",
+      "gridPos": {
+        "x": 0,
+        "y": 58,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_simulator_quality_rate_percent{cell=\"labeler\"}",
+          "legendFormat": "alignment",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 85,
+          "max": 100
+        }
+      }
+    },
+    {
+      "id": 70,
+      "type": "row",
+      "title": "Palletizer (Siemens S7)",
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": false
+    },
+    {
+      "id": 71,
+      "type": "timeseries",
+      "title": "Layer count",
+      "gridPos": {
+        "x": 0,
+        "y": 65,
+        "w": 8,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_palletizer_layer_count",
+          "legendFormat": "layers",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "min": 0,
+          "max": 10
+        }
+      }
+    },
+    {
+      "id": 72,
+      "type": "stat",
+      "title": "Pallet complete",
+      "gridPos": {
+        "x": 8,
+        "y": 65,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_palletizer_pallet_complete",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "building",
+                  "color": "yellow"
+                },
+                "1": {
+                  "text": "COMPLETE",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": 73,
+      "type": "stat",
+      "title": "Cycles/hr",
+      "gridPos": {
+        "x": 14,
+        "y": 65,
+        "w": 6,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_palletizer_cycles_per_hr",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }
