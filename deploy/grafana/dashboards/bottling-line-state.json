@@ -91,6 +91,73 @@
           "format": "table"
         }
       ]
+    },
+    {
+      "id": 10,
+      "type": "row",
+      "title": "Filler Unit (Modbus TCP)",
+      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 },
+      "collapsed": false
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Fill level (%)",
+      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_fill_level_percent",
+          "legendFormat": "fill level",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "red" },
+              { "value": 20, "color": "yellow" },
+              { "value": 50, "color": "green" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 12,
+      "type": "stat",
+      "title": "Filler motor state",
+      "gridPos": { "x": 12, "y": 15, "w": 6, "h": 4 },
+      "targets": [
+        { "expr": "eirvah_modbus_simulator_motor_state", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": {
+              "0": { "text": "stopped", "color": "gray"  },
+              "1": { "text": "running", "color": "green" }
+            }}
+          ]
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "timeseries",
+      "title": "Filler throughput (bottles/s)",
+      "gridPos": { "x": 18, "y": 15, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_throughput_bottles_per_second",
+          "legendFormat": "throughput",
+          "refId": "A"
+        }
+      ]
     }
   ]
 }
