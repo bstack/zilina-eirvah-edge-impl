@@ -6,6 +6,10 @@ import pytest
 from eirvah_contracts.pipeline import ContextualizeResult, PublishRequest
 from eirvah_contracts.uns import UNSPath, build_uns_topic
 
+_SENSOR_URI = "https://eirvah.uniza/ontology/BottlerTemperatureSensor01"
+_FEATURE_URI = "https://eirvah.uniza/ontology/Bottler"
+_PROPERTY_URI = "https://eirvah.uniza/ontology/Temperature"
+
 
 def _uns() -> UNSPath:
     return UNSPath(
@@ -25,11 +29,15 @@ def test_contextualize_result_round_trip() -> None:
         uns_topic=build_uns_topic(path),
         uns_path=path,
         semantic_type="temperature.celsius",
+        sensor_uri=_SENSOR_URI,
+        feature_uri=_FEATURE_URI,
+        property_uri=_PROPERTY_URI,
     )
     raw = result.model_dump(mode="json")
     restored = ContextualizeResult.model_validate(raw)
     assert restored.uns_topic == result.uns_topic
     assert restored.semantic_type == "temperature.celsius"
+    assert restored.sensor_uri == _SENSOR_URI
 
 
 def test_publish_request_round_trip() -> None:
@@ -47,11 +55,15 @@ def test_publish_request_round_trip() -> None:
         source_node_id="Bottler.Temperature01",
         source_timestamp=now,
         edge_ingress=now,
+        sensor_uri=_SENSOR_URI,
+        feature_uri=_FEATURE_URI,
+        property_uri=_PROPERTY_URI,
     )
     raw = req.model_dump(mode="json")
     restored = PublishRequest.model_validate(raw)
     assert restored.value == 23.4
     assert restored.quality == "good"
+    assert restored.sensor_uri == _SENSOR_URI
 
 
 def test_publish_request_rejects_bad_correlation_id() -> None:
@@ -72,4 +84,7 @@ def test_publish_request_rejects_bad_correlation_id() -> None:
             source_node_id="x",
             source_timestamp=now,
             edge_ingress=now,
+            sensor_uri=_SENSOR_URI,
+            feature_uri=_FEATURE_URI,
+            property_uri=_PROPERTY_URI,
         )

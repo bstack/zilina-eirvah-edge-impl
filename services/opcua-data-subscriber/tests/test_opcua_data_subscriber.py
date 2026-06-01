@@ -17,7 +17,7 @@ def _make_data_value(value: Any, status_good: bool = True) -> MagicMock:
     sc = MagicMock()
     sc.is_bad.return_value = not status_good
     sc.is_uncertain.return_value = False
-    dv.StatusCode = sc
+    dv.StatusCode_ = sc
     return dv
 
 
