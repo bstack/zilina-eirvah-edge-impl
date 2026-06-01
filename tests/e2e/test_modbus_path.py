@@ -23,6 +23,11 @@ EXPECTED_ALIASES = {
     "Filler.FillLevelSensor01",
     "Filler.Motor01.State",
     "Filler.ThroughputMeter01",
+    "Conveyor.Belt01.BeltSpeed",
+    "Conveyor.Belt01.JamDetected",
+    "Conveyor.Belt01.BottleCount",
+    "RejectStation.RejectCounter01",
+    "RejectStation.ConveyorActive01",
 }
 
 
