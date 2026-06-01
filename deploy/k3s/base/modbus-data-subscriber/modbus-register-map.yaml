@@ -1,10 +1,10 @@
-# Register map for modbus-data-subscriber — Filler unit (Modbus TCP)
-# Addresses 0-2; scale converts raw integer register to physical value.
+# Register map for modbus-data-subscriber — Filler + Conveyor + Reject Station
 host: modbus-simulator
 port: 5020
 unit_id: 1
 poll_interval_ms: 500
 registers:
+  # Filler (addresses 0–2)
   - address: 0
     alias: "Filler.FillLevelSensor01"
     scale: 10.0
@@ -17,3 +17,25 @@ registers:
     alias: "Filler.ThroughputMeter01"
     scale: 100.0
     value_type: double
+  # Conveyor (addresses 3–5)
+  - address: 3
+    alias: "Conveyor.Belt01.BeltSpeed"
+    scale: 100.0
+    value_type: double
+  - address: 4
+    alias: "Conveyor.Belt01.JamDetected"
+    scale: 1.0
+    value_type: int64
+  - address: 5
+    alias: "Conveyor.Belt01.BottleCount"
+    scale: 1.0
+    value_type: int64
+  # Reject Station (addresses 6–7)
+  - address: 6
+    alias: "RejectStation.RejectCounter01"
+    scale: 1.0
+    value_type: int64
+  - address: 7
+    alias: "RejectStation.ConveyorActive01"
+    scale: 1.0
+    value_type: int64

@@ -64,3 +64,113 @@ mappings:
     equipment: throughput_meter_01
     measurement: throughput
     semantic_type: flow.bps
+
+  # Conveyor (Modbus)
+  - node_id: "Conveyor.Belt01.BeltSpeed"
+    area: factory1
+    line: line_a
+    cell: conveyor
+    equipment: belt_01
+    measurement: belt_speed
+    semantic_type: speed.ms
+
+  - node_id: "Conveyor.Belt01.JamDetected"
+    area: factory1
+    line: line_a
+    cell: conveyor
+    equipment: belt_01
+    measurement: jam_detected
+    semantic_type: state.enum
+
+  - node_id: "Conveyor.Belt01.BottleCount"
+    area: factory1
+    line: line_a
+    cell: conveyor
+    equipment: belt_01
+    measurement: bottle_count
+    semantic_type: count.cumulative
+
+  # Reject Station (Modbus)
+  - node_id: "RejectStation.RejectCounter01"
+    area: factory1
+    line: line_a
+    cell: reject_station
+    equipment: reject_counter_01
+    measurement: reject_count
+    semantic_type: count.cumulative
+
+  - node_id: "RejectStation.ConveyorActive01"
+    area: factory1
+    line: line_a
+    cell: reject_station
+    equipment: conveyor_01
+    measurement: conveyor_active
+    semantic_type: state.enum
+
+  # Inspector (OPC UA)
+  - node_id: "Inspector.Inspector01.GoodRate"
+    area: factory1
+    line: line_a
+    cell: inspector
+    equipment: inspector_01
+    measurement: good_rate
+    semantic_type: quality.percent
+
+  # Labeler (OPC UA)
+  - node_id: "Labeler.Labeler01.AlignmentScore"
+    area: factory1
+    line: line_a
+    cell: labeler
+    equipment: labeler_01
+    measurement: alignment_score
+    semantic_type: quality.percent
+
+  # Capper (S7)
+  - node_id: "Capper.TorqueSensor01"
+    area: factory1
+    line: line_a
+    cell: capper
+    equipment: torque_sensor_01
+    measurement: torque
+    semantic_type: torque.nm
+
+  - node_id: "Capper.CapSensor01"
+    area: factory1
+    line: line_a
+    cell: capper
+    equipment: cap_sensor_01
+    measurement: cap_presence
+    semantic_type: state.enum
+
+  - node_id: "Capper.RejectCounter01"
+    area: factory1
+    line: line_a
+    cell: capper
+    equipment: reject_counter_01
+    measurement: rejects_per_min
+    semantic_type: count.rate
+
+  # Palletizer (S7)
+  - node_id: "Palletizer.LayerCounter01"
+    area: factory1
+    line: line_a
+    cell: palletizer
+    equipment: layer_counter_01
+    measurement: layer_count
+    semantic_type: count.cumulative
+
+  - node_id: "Palletizer.PalletSensor01"
+    area: factory1
+    line: line_a
+    cell: palletizer
+    equipment: pallet_sensor_01
+    measurement: pallet_complete
+    semantic_type: state.enum
+
+  - node_id: "Palletizer.CycleCounter01"
+    area: factory1
+    line: line_a
+    cell: palletizer
+    equipment: cycle_counter_01
+    measurement: cycles_per_hr
+    semantic_type: count.rate

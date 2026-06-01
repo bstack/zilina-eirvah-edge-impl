@@ -41,3 +41,74 @@ rules:
     value_type: double
     unit: "bottle/s"
     drop_bad_quality: false
+
+  # Conveyor (Modbus)
+  - node_id: "Conveyor.Belt01.BeltSpeed"
+    value_type: double
+    unit: "m/s"
+    drop_bad_quality: false
+
+  - node_id: "Conveyor.Belt01.JamDetected"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "Conveyor.Belt01.BottleCount"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  # Reject Station (Modbus)
+  - node_id: "RejectStation.RejectCounter01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "RejectStation.ConveyorActive01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  # Inspector (OPC UA)
+  - node_id: "Inspector.Inspector01.GoodRate"
+    value_type: double
+    unit: percent
+    drop_bad_quality: false
+
+  # Labeler (OPC UA)
+  - node_id: "Labeler.Labeler01.AlignmentScore"
+    value_type: double
+    unit: percent
+    drop_bad_quality: false
+
+  # Capper (S7)
+  - node_id: "Capper.TorqueSensor01"
+    value_type: double
+    unit: "Nm"
+    drop_bad_quality: false
+
+  - node_id: "Capper.CapSensor01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "Capper.RejectCounter01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  # Palletizer (S7)
+  - node_id: "Palletizer.LayerCounter01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "Palletizer.PalletSensor01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "Palletizer.CycleCounter01"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
