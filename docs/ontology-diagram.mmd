@@ -1,0 +1,108 @@
+classDiagram
+    class ssn_System["ssn:System"]
+    class sosa_FeatureOfInterest["sosa:FeatureOfInterest"]
+    class sosa_Sensor["sosa:Sensor"]
+    class sosa_ObservableProperty["sosa:ObservableProperty"]
+
+    class Bottler["Bottler (OPC UA)"]
+    Bottler : temperature [degC]
+    Bottler : setpoint_temperature [degC]
+    Bottler : state [dimensionless]
+    Bottler : rpm [rpm]
+    Bottler : throughput [bottle/s]
+
+    class Filler["Filler (Modbus TCP)"]
+    Filler : fill_level [percent]
+    Filler : state [dimensionless]
+    Filler : throughput [bottle/s]
+
+    class Conveyor["Conveyor (Modbus TCP)"]
+    Conveyor : belt_speed [m/s]
+    Conveyor : jam_detected [dimensionless]
+    Conveyor : bottle_count [dimensionless]
+
+    class RejectStation["Reject Station (Modbus TCP)"]
+    RejectStation : reject_count [dimensionless]
+    RejectStation : conveyor_active [dimensionless]
+
+    class Inspector["Vision Inspector (OPC UA)"]
+    Inspector : good_rate [percent]
+
+    class Labeler["Labeler (OPC UA)"]
+    Labeler : alignment_score [percent]
+
+    class Capper["Capper (Siemens S7)"]
+    Capper : torque [Nm]
+    Capper : cap_presence [dimensionless]
+    Capper : rejects_per_min [dimensionless]
+
+    class Palletizer["Palletizer (Siemens S7)"]
+    Palletizer : layer_count [dimensionless]
+    Palletizer : pallet_complete [dimensionless]
+    Palletizer : cycles_per_hr [dimensionless]
+
+    ssn_System <|-- Bottler
+    sosa_FeatureOfInterest <|-- Bottler
+    ssn_System <|-- Filler
+    sosa_FeatureOfInterest <|-- Filler
+    ssn_System <|-- Conveyor
+    sosa_FeatureOfInterest <|-- Conveyor
+    ssn_System <|-- RejectStation
+    sosa_FeatureOfInterest <|-- RejectStation
+    ssn_System <|-- Inspector
+    sosa_FeatureOfInterest <|-- Inspector
+    ssn_System <|-- Labeler
+    sosa_FeatureOfInterest <|-- Labeler
+    ssn_System <|-- Capper
+    sosa_FeatureOfInterest <|-- Capper
+    ssn_System <|-- Palletizer
+    sosa_FeatureOfInterest <|-- Palletizer
+
+    class MotorRpm["MotorRpm [rpm]"]
+    sosa_ObservableProperty <|-- MotorRpm
+    class BottlerMotorRpmSensor01["BottlerMotorRpmSensor01"]
+    sosa_Sensor <|-- BottlerMotorRpmSensor01
+    BottlerMotorRpmSensor01 --> Bottler : isHostedBy
+    BottlerMotorRpmSensor01 --> MotorRpm : observes
+
+    class FillLevel["FillLevel [percent]"]
+    sosa_ObservableProperty <|-- FillLevel
+    class FillerFillLevelSensor01["FillerFillLevelSensor01"]
+    sosa_Sensor <|-- FillerFillLevelSensor01
+    FillerFillLevelSensor01 --> Filler : isHostedBy
+    FillerFillLevelSensor01 --> FillLevel : observes
+
+    class BeltSpeed["BeltSpeed [m/s]"]
+    sosa_ObservableProperty <|-- BeltSpeed
+    class ConveyorBeltSpeedSensor01["ConveyorBeltSpeedSensor01"]
+    sosa_Sensor <|-- ConveyorBeltSpeedSensor01
+    ConveyorBeltSpeedSensor01 --> Conveyor : isHostedBy
+    ConveyorBeltSpeedSensor01 --> BeltSpeed : observes
+
+    class GoodRate["GoodRate [percent]"]
+    sosa_ObservableProperty <|-- GoodRate
+    class InspectorGoodRateSensor01["InspectorGoodRateSensor01"]
+    sosa_Sensor <|-- InspectorGoodRateSensor01
+    InspectorGoodRateSensor01 --> Inspector : isHostedBy
+    InspectorGoodRateSensor01 --> GoodRate : observes
+
+    class AlignmentScore["AlignmentScore [percent]"]
+    sosa_ObservableProperty <|-- AlignmentScore
+    class LabelerAlignmentSensor01["LabelerAlignmentSensor01"]
+    sosa_Sensor <|-- LabelerAlignmentSensor01
+    LabelerAlignmentSensor01 --> Labeler : isHostedBy
+    LabelerAlignmentSensor01 --> AlignmentScore : observes
+
+    class CapPresence["CapPresence [dimensionless]"]
+    sosa_ObservableProperty <|-- CapPresence
+    class CapperCapSensor01["CapperCapSensor01"]
+    sosa_Sensor <|-- CapperCapSensor01
+    CapperCapSensor01 --> Capper : isHostedBy
+    CapperCapSensor01 --> CapPresence : observes
+
+    class CyclesPerHour["CyclesPerHour [dimensionless]"]
+    sosa_ObservableProperty <|-- CyclesPerHour
+    class PalletizerCycleCounter01["PalletizerCycleCounter01"]
+    sosa_Sensor <|-- PalletizerCycleCounter01
+    PalletizerCycleCounter01 --> Palletizer : isHostedBy
+    PalletizerCycleCounter01 --> CyclesPerHour : observes
