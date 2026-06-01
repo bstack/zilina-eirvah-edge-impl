@@ -35,17 +35,33 @@ def register_to_scale(raw: int, *, scale: int) -> float:
 
 @dataclass
 class RegisterBlock:
+    # Filler (addresses 0–2)
     fill_level_raw: int = 750    # 75.0% (scale ×10)
     motor_state: int = 1          # running
-    throughput_raw: int = 80      # 0.80 bottles/s
+    throughput_raw: int = 80      # 0.80 bottles/s (scale ×100)
+    # Conveyor (addresses 3–5)
+    belt_speed_raw: int = 50      # 0.50 m/s (scale ×100)
+    jam_detected: int = 0
+    bottle_count: int = 0         # cumulative, wraps at 65535
+    # Reject Station (addresses 6–7)
+    reject_count: int = 0         # cumulative, rarely increments
+    conveyor_active: int = 1
 
     def as_list(self) -> list[int]:
-        return [self.fill_level_raw, self.motor_state, self.throughput_raw]
+        return [
+            self.fill_level_raw, self.motor_state, self.throughput_raw,
+            self.belt_speed_raw, self.jam_detected, self.bottle_count,
+            self.reject_count, self.conveyor_active,
+        ]
 
     def tick(self, *, rng: random.Random, delta_max: int = 20) -> None:
         span = abs(delta_max)
-        delta = rng.randint(-span, span)
-        self.fill_level_raw = max(500, min(950, self.fill_level_raw + delta))
+        self.fill_level_raw = max(500, min(950, self.fill_level_raw + rng.randint(-span, span)))
+        self.belt_speed_raw = max(20, min(80, self.belt_speed_raw + rng.randint(-5, 5)))
+        self.bottle_count = (self.bottle_count + 1) % 65536
+        self.jam_detected = 1 if rng.random() < 0.001 else 0
+        if rng.random() < 0.01:
+            self.reject_count = min(self.reject_count + 1, 65535)
 
 
 class SimulatorRuntime:
@@ -62,7 +78,7 @@ class SimulatorRuntime:
 
     def _build_context(self) -> ModbusServerContext:
         store = ModbusSlaveContext(
-            hr=ModbusSequentialDataBlock(0, self._block.as_list() + [0] * 7),
+            hr=ModbusSequentialDataBlock(0, self._block.as_list() + [0] * 2),
         )
         return ModbusServerContext(slaves={self._settings.unit_id: store}, single=False)
 
@@ -75,13 +91,14 @@ class SimulatorRuntime:
                 self._context[self._settings.unit_id].setValues(
                     _HR, 0, self._block.as_list()
                 )
-            self._metrics.set_fill_level(
-                register_to_scale(self._block.fill_level_raw, scale=10)
-            )
+            self._metrics.set_fill_level(register_to_scale(self._block.fill_level_raw, scale=10))
             self._metrics.set_motor_state(self._block.motor_state)
-            self._metrics.set_throughput(
-                register_to_scale(self._block.throughput_raw, scale=100)
-            )
+            self._metrics.set_throughput(register_to_scale(self._block.throughput_raw, scale=100))
+            self._metrics.set_belt_speed(register_to_scale(self._block.belt_speed_raw, scale=100))
+            self._metrics.set_jam_detected(self._block.jam_detected)
+            self._metrics.set_bottle_count(self._block.bottle_count)
+            self._metrics.set_reject_count(self._block.reject_count)
+            self._metrics.set_conveyor_active(self._block.conveyor_active)
 
     async def run(self) -> None:
         self._context = self._build_context()
