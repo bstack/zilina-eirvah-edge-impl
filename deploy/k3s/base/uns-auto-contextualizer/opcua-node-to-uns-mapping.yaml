@@ -40,3 +40,27 @@ mappings:
     equipment: setpoint_unit
     measurement: setpoint_temperature
     semantic_type: setpoint.target
+
+  - node_id: "Filler.FillLevelSensor01"
+    area: factory1
+    line: line_a
+    cell: filler
+    equipment: fill_level_sensor_01
+    measurement: fill_level
+    semantic_type: level.percent
+
+  - node_id: "Filler.Motor01.State"
+    area: factory1
+    line: line_a
+    cell: filler
+    equipment: motor_01
+    measurement: state
+    semantic_type: state.enum
+
+  - node_id: "Filler.ThroughputMeter01"
+    area: factory1
+    line: line_a
+    cell: filler
+    equipment: throughput_meter_01
+    measurement: throughput
+    semantic_type: flow.bps

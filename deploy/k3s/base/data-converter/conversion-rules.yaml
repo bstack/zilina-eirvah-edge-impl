@@ -26,3 +26,18 @@ rules:
     value_type: double
     unit: degC
     drop_bad_quality: false
+
+  - node_id: "Filler.FillLevelSensor01"
+    value_type: double
+    unit: percent
+    drop_bad_quality: false
+
+  - node_id: "Filler.Motor01.State"
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+
+  - node_id: "Filler.ThroughputMeter01"
+    value_type: double
+    unit: "bottle/s"
+    drop_bad_quality: false

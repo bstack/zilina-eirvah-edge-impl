@@ -1,22 +1,19 @@
-# Register map for modbus-data-subscriber (mirrors bottling-line address space)
+# Register map for modbus-data-subscriber — Filler unit (Modbus TCP)
+# Addresses 0-2; scale converts raw integer register to physical value.
 host: modbus-simulator
 port: 5020
 unit_id: 1
 poll_interval_ms: 500
 registers:
   - address: 0
-    alias: "Bottler.Temperature01"
-    scale: 100.0
+    alias: "Filler.FillLevelSensor01"
+    scale: 10.0
     value_type: double
   - address: 1
-    alias: "Bottler.SetpointUnit.SetpointTemperature"
-    scale: 100.0
-    value_type: double
-  - address: 2
-    alias: "Bottler.Motor01.State"
+    alias: "Filler.Motor01.State"
     scale: 1.0
     value_type: int64
-  - address: 3
-    alias: "Bottler.ThroughputMeter01"
+  - address: 2
+    alias: "Filler.ThroughputMeter01"
     scale: 100.0
     value_type: double
