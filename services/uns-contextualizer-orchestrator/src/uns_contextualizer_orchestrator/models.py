@@ -52,4 +52,7 @@ class PipelineContext:
             source_node_id=self.raw.node_id,
             source_timestamp=self.raw.source_timestamp,
             edge_ingress=self.raw.received_at,
+            sensor_uri=self.contextualized.sensor_uri,
+            feature_uri=self.contextualized.feature_uri,
+            property_uri=self.contextualized.property_uri,
         )

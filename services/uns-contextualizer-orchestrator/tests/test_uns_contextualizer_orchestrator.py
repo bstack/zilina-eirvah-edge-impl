@@ -69,6 +69,9 @@ def test_pipeline_context_builds_publish_request() -> None:
         uns_topic=build_uns_topic(uns_path),
         uns_path=uns_path,
         semantic_type="temperature.celsius",
+        sensor_uri="https://eirvah.uniza/ontology/BottlerTemperatureSensor01",
+        feature_uri="https://eirvah.uniza/ontology/Bottler",
+        property_uri="https://eirvah.uniza/ontology/Temperature",
     )
     ctx = PipelineContext(
         correlation_id="01HZXC8P9G7Q3M6V0K2T8R5W4A",
@@ -143,6 +146,9 @@ async def test_run_pipeline_success() -> None:
     ctx_result = ContextualizeResult(
         uns_topic=build_uns_topic(uns_path), uns_path=uns_path,
         semantic_type="temperature.celsius",
+        sensor_uri="https://eirvah.uniza/ontology/BottlerTemperatureSensor01",
+        feature_uri="https://eirvah.uniza/ontology/Bottler",
+        property_uri="https://eirvah.uniza/ontology/Temperature",
     )
 
     cfg = PipelineConfig(
