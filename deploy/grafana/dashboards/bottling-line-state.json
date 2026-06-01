@@ -3,16 +3,27 @@
   "title": "Bottling Line State",
   "schemaVersion": 39,
   "version": 1,
-  "tags": ["eirvah", "device-truth"],
+  "tags": [
+    "eirvah",
+    "device-truth"
+  ],
   "timezone": "browser",
-  "time": { "from": "now-15m", "to": "now" },
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
   "refresh": "5s",
   "panels": [
     {
       "id": 1,
       "type": "timeseries",
       "title": "Temperature vs setpoint",
-      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "eirvah_simulator_temperature_celsius",
@@ -25,35 +36,74 @@
           "refId": "S"
         }
       ],
-      "fieldConfig": { "defaults": { "unit": "celsius" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius"
+        }
+      }
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Current setpoint (°C)",
-      "gridPos": { "x": 12, "y": 0, "w": 6, "h": 4 },
+      "title": "Current setpoint (\u00b0C)",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
       "targets": [
-        { "expr": "eirvah_simulator_setpoint_celsius", "refId": "A" }
+        {
+          "expr": "eirvah_simulator_setpoint_celsius",
+          "refId": "A"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "celsius" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius"
+        }
+      }
     },
     {
       "id": 3,
       "type": "stat",
       "title": "Motor state",
-      "gridPos": { "x": 18, "y": 0, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
       "targets": [
-        { "expr": "eirvah_simulator_motor_state", "refId": "A" }
+        {
+          "expr": "eirvah_simulator_motor_state",
+          "refId": "A"
+        }
       ],
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": {
-              "0": { "text": "stopped",  "color": "gray"   },
-              "1": { "text": "starting", "color": "yellow" },
-              "2": { "text": "running",  "color": "green"  },
-              "3": { "text": "fault",    "color": "red"    }
-            }}
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "stopped",
+                  "color": "gray"
+                },
+                "1": {
+                  "text": "starting",
+                  "color": "yellow"
+                },
+                "2": {
+                  "text": "running",
+                  "color": "green"
+                },
+                "3": {
+                  "text": "fault",
+                  "color": "red"
+                }
+              }
+            }
           ]
         }
       }
@@ -62,26 +112,51 @@
       "id": 4,
       "type": "timeseries",
       "title": "Motor RPM",
-      "gridPos": { "x": 12, "y": 4, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
       "targets": [
-        { "expr": "eirvah_simulator_motor_rpm", "refId": "A" }
+        {
+          "expr": "eirvah_simulator_motor_rpm",
+          "refId": "A"
+        }
       ],
-      "fieldConfig": { "defaults": { "unit": "rotrpm" } }
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rotrpm"
+        }
+      }
     },
     {
       "id": 5,
       "type": "timeseries",
       "title": "Throughput (bottles/s)",
-      "gridPos": { "x": 18, "y": 4, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 18,
+        "y": 4,
+        "w": 6,
+        "h": 4
+      },
       "targets": [
-        { "expr": "eirvah_simulator_throughput_bottles_per_second", "refId": "A" }
+        {
+          "expr": "eirvah_simulator_throughput_bottles_per_second",
+          "refId": "A"
+        }
       ]
     },
     {
       "id": 6,
       "type": "table",
       "title": "Setpoint writes (cumulative)",
-      "gridPos": { "x": 0, "y": 8, "w": 24, "h": 6 },
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 24,
+        "h": 6
+      },
       "targets": [
         {
           "expr": "eirvah_simulator_setpoint_writes_total",
@@ -93,17 +168,83 @@
       ]
     },
     {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Hot spike events (rate)",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "rate(eirvah_simulator_hot_spikes_total[$__rate_interval])",
+          "legendFormat": "{{trigger}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "fillOpacity": 20
+          },
+          "color": {
+            "fixedColor": "red",
+            "mode": "fixed"
+          }
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Sample quality by equipment (rate)",
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 6
+      },
+      "targets": [
+        {
+          "expr": "rate(eirvah_simulator_quality_count_total[$__rate_interval])",
+          "legendFormat": "{{equipment}} / {{quality}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "custom": {
+            "fillOpacity": 10
+          }
+        }
+      }
+    },
+    {
       "id": 10,
       "type": "row",
       "title": "Filler Unit (Modbus TCP)",
-      "gridPos": { "x": 0, "y": 14, "w": 24, "h": 1 },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 1
+      },
       "collapsed": false
     },
     {
       "id": 11,
       "type": "timeseries",
       "title": "Fill level (%)",
-      "gridPos": { "x": 0, "y": 15, "w": 12, "h": 8 },
+      "gridPos": {
+        "x": 0,
+        "y": 21,
+        "w": 12,
+        "h": 8
+      },
       "targets": [
         {
           "expr": "eirvah_modbus_simulator_fill_level_percent",
@@ -119,9 +260,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "red" },
-              { "value": 20, "color": "yellow" },
-              { "value": 50, "color": "green" }
+              {
+                "value": null,
+                "color": "red"
+              },
+              {
+                "value": 20,
+                "color": "yellow"
+              },
+              {
+                "value": 50,
+                "color": "green"
+              }
             ]
           }
         }
@@ -131,17 +281,34 @@
       "id": 12,
       "type": "stat",
       "title": "Filler motor state",
-      "gridPos": { "x": 12, "y": 15, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 12,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
       "targets": [
-        { "expr": "eirvah_modbus_simulator_motor_state", "refId": "A" }
+        {
+          "expr": "eirvah_modbus_simulator_motor_state",
+          "refId": "A"
+        }
       ],
       "fieldConfig": {
         "defaults": {
           "mappings": [
-            { "type": "value", "options": {
-              "0": { "text": "stopped", "color": "gray"  },
-              "1": { "text": "running", "color": "green" }
-            }}
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "stopped",
+                  "color": "gray"
+                },
+                "1": {
+                  "text": "running",
+                  "color": "green"
+                }
+              }
+            }
           ]
         }
       }
@@ -150,7 +317,12 @@
       "id": 13,
       "type": "timeseries",
       "title": "Filler throughput (bottles/s)",
-      "gridPos": { "x": 18, "y": 15, "w": 6, "h": 4 },
+      "gridPos": {
+        "x": 18,
+        "y": 21,
+        "w": 6,
+        "h": 4
+      },
       "targets": [
         {
           "expr": "eirvah_modbus_simulator_throughput_bottles_per_second",
