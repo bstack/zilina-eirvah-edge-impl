@@ -27,6 +27,8 @@ members = [
     "services/decision-agent-stub",
     "services/modbus-simulator",
     "services/modbus-data-subscriber",
+    "services/s7-simulator",
+    "services/s7-data-subscriber",
 ]
 
 [tool.uv.sources]
@@ -46,6 +48,8 @@ actuation-signal-publisher               = { workspace = true }
 decision-agent-stub                      = { workspace = true }
 modbus-simulator                         = { workspace = true }
 modbus-data-subscriber                   = { workspace = true }
+s7-simulator                             = { workspace = true }
+s7-data-subscriber                       = { workspace = true }
 
 [dependency-groups]
 dev = [
@@ -65,6 +69,8 @@ dev = [
     "decision-agent-stub",
     "modbus-simulator",
     "modbus-data-subscriber",
+    "s7-simulator",
+    "s7-data-subscriber",
     "aio-pika>=9.0",
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
