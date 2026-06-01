@@ -19,6 +19,9 @@ class ContextualizeResult(BaseModel):
     uns_topic: str
     uns_path: UNSPath
     semantic_type: str
+    sensor_uri: str    # e.g. "https://eirvah.uniza/ontology/TorqueSensor01"
+    feature_uri: str   # e.g. "https://eirvah.uniza/ontology/Capper"
+    property_uri: str  # e.g. "https://eirvah.uniza/ontology/Torque"
 
 
 class PublishRequest(BaseModel):
@@ -42,6 +45,9 @@ class PublishRequest(BaseModel):
     source_node_id: str
     source_timestamp: datetime
     edge_ingress: datetime
+    sensor_uri: str
+    feature_uri: str
+    property_uri: str
 
     @field_validator("correlation_id")
     @classmethod
