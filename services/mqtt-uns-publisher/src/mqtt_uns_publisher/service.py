@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
+import json
 
 import aiomqtt
 import structlog
@@ -12,7 +12,7 @@ from eirvah_bus.client import BusClient
 from eirvah_bus.consumer import subscribe_queue_group
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
 from eirvah_contracts.pipeline import PublishRequest
-from eirvah_contracts.telemetry import TelemetryPayload, TelemetrySource, TelemetryTimestamps
+from eirvah_contracts.sosa import SOSAObservation
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter, make_gauge
@@ -24,25 +24,16 @@ _log = structlog.get_logger("mqtt-uns-publisher")
 SUBJECT = "uns.work.publish"
 
 
-def build_telemetry_payload(req: PublishRequest) -> TelemetryPayload:
-    return TelemetryPayload(
-        correlation_id=req.correlation_id,
-        value=req.value,
-        value_type=req.value_type,
-        semantic_type=req.semantic_type,
+def build_sosa_observation(req: PublishRequest) -> SOSAObservation:
+    return SOSAObservation(
+        made_by_sensor=req.sensor_uri,
+        has_feature_of_interest=req.feature_uri,
+        observed_property=req.property_uri,
+        has_simple_result=req.value,
+        result_time=req.source_timestamp,
         unit=req.unit,
         quality=req.quality,
-        uns_path=req.uns_path,
-        source=TelemetrySource(
-            protocol="opcua",
-            endpoint=req.source_endpoint,
-            node_id=req.source_node_id,
-        ),
-        timestamps=TelemetryTimestamps(
-            source=req.source_timestamp,
-            edge_ingress=req.edge_ingress,
-            edge_publish=datetime.now(UTC),
-        ),
+        correlation_id=req.correlation_id,
     )
 
 
@@ -107,11 +98,11 @@ class MqttPublisherWorker:
             if self._mqtt_client is None:
                 raise RuntimeError("MQTT not connected")
 
-            telemetry = build_telemetry_payload(req)
+            observation = build_sosa_observation(req)
             try:
                 await self._mqtt_client.publish(
                     req.uns_topic,
-                    payload=telemetry.model_dump_json().encode(),
+                    payload=json.dumps(observation.to_jsonld()).encode(),
                     qos=self._settings.qos,
                     retain=self._settings.retain,
                 )
