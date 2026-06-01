@@ -11,6 +11,8 @@ SERVICES=(
   opcua-data-subscriber
   modbus-simulator
   modbus-data-subscriber
+  s7-simulator
+  s7-data-subscriber
   data-converter
   uns-auto-contextualizer
   mqtt-uns-publisher

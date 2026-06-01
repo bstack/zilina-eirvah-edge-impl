@@ -1,0 +1,37 @@
+# S7 unit map — Capper (DB1) + Palletizer (DB2)
+host: s7-simulator
+port: 102
+rack: 0
+slot: 1
+poll_interval_ms: 1000
+data_blocks:
+  - db: 1
+    size: 8
+    signals:
+      - offset: 0
+        type: real
+        alias: "Capper.TorqueSensor01"
+        value_type: double
+      - offset: 4
+        type: int
+        alias: "Capper.CapSensor01"
+        value_type: int64
+      - offset: 6
+        type: int
+        alias: "Capper.RejectCounter01"
+        value_type: int64
+  - db: 2
+    size: 8
+    signals:
+      - offset: 0
+        type: int
+        alias: "Palletizer.LayerCounter01"
+        value_type: int64
+      - offset: 2
+        type: int
+        alias: "Palletizer.PalletSensor01"
+        value_type: int64
+      - offset: 4
+        type: int
+        alias: "Palletizer.CycleCounter01"
+        value_type: int64

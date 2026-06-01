@@ -14,6 +14,8 @@ SERVICES=(
   opcua-data-subscriber
   modbus-simulator
   modbus-data-subscriber
+  s7-simulator
+  s7-data-subscriber
   data-converter
   uns-auto-contextualizer
   mqtt-uns-publisher
@@ -54,6 +56,7 @@ echo "    Grafana:       kubectl -n ${NAMESPACE} port-forward svc/grafana 3000:3
 echo "    Prometheus:    kubectl -n ${NAMESPACE} port-forward svc/prometheus 9090:9090"
 echo "    OPC UA:        kubectl -n ${NAMESPACE} port-forward svc/opcua-simulator 4840:4840"
 echo "    Modbus:        kubectl -n ${NAMESPACE} port-forward svc/modbus-simulator 5020:5020"
+echo "    S7:            kubectl -n ${NAMESPACE} port-forward svc/s7-simulator 102:102"
 echo "    Mosquitto:     kubectl -n ${NAMESPACE} port-forward svc/mosquitto 1883:1883"
 echo "    NATS:          kubectl -n ${NAMESPACE} port-forward svc/nats 4222:4222"
 echo "    RabbitMQ:      kubectl -n ${NAMESPACE} port-forward svc/rabbitmq 15672:15672"

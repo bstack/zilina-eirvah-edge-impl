@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: s7-simulator
+  labels: { app.kubernetes.io/name: s7-simulator }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: s7-simulator }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: s7-simulator }
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: s7-simulator
+          image: s7-simulator:local
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: S7_SIMULATOR_TICK_RATE_MS
+              value: "500"
+          ports:
+            - { name: s7, containerPort: 102 }
+            - { name: http, containerPort: 8080 }
+          securityContext:
+            runAsUser: 0
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "25m", memory: "64Mi" }
+            limits:   { cpu: "200m", memory: "128Mi" }
