@@ -20,10 +20,9 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.asyncio
 
 EXPECTED_ALIASES = {
-    "Bottler.Temperature01",
-    "Bottler.SetpointUnit.SetpointTemperature",
-    "Bottler.Motor01.State",
-    "Bottler.ThroughputMeter01",
+    "Filler.FillLevelSensor01",
+    "Filler.Motor01.State",
+    "Filler.ThroughputMeter01",
 }
 
 
