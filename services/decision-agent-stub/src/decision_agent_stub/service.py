@@ -118,8 +118,8 @@ class DecisionAgentRuntime:
                 async for message in mqtt.messages:
                     try:
                         payload = json.loads(message.payload)
-                        value = float(payload["value"])
-                        correlation_id = payload.get("correlation_id") or generate_correlation_id()
+                        value = float(payload["sosa:hasSimpleResult"])
+                        correlation_id = payload.get("eirvah:correlationId") or generate_correlation_id()
                         ts = datetime.now(UTC)
                         req = self._window.update(value=value, ts=ts, correlation_id=correlation_id)
                         if req is not None:
