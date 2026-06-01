@@ -6,4 +6,4 @@ resources:
 configMapGenerator:
   - name: uns-auto-contextualizer-config
     files:
-      - opcua-node-to-uns-mapping.yaml
+      - eirvah-line-a.jsonld

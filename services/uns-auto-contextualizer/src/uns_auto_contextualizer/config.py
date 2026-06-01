@@ -16,8 +16,6 @@ class AutoContextualizerSettings(BaseSettings):
     )
 
     nats_servers: list[str] = ["nats://nats:4222"]
-    mapping_path: Path = Path("/etc/uns-auto-contextualizer/opcua-node-to-uns-mapping.yaml")
-    enterprise: str = "uniza"
-    site: str = "zilina"
+    ontology_path: Path = Path("/etc/uns-auto-contextualizer/eirvah-line-a.jsonld")
     http_port: int = Field(default=8080, ge=1024, le=65535)
     log_level: str = "INFO"

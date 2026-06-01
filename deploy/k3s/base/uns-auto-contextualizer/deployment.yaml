@@ -21,10 +21,8 @@ spec:
           env:
             - name: UNS_AUTO_CONTEXTUALIZER_NATS_SERVERS
               value: '["nats://nats:4222"]'
-            - name: UNS_AUTO_CONTEXTUALIZER_ENTERPRISE
-              value: uniza
-            - name: UNS_AUTO_CONTEXTUALIZER_SITE
-              value: zilina
+            - name: UNS_AUTO_CONTEXTUALIZER_ONTOLOGY_PATH
+              value: "/etc/uns-auto-contextualizer/eirvah-line-a.jsonld"
           ports:
             - { name: http, containerPort: 8080 }
           volumeMounts:
@@ -40,8 +38,8 @@ spec:
             initialDelaySeconds: 10
             periodSeconds: 10
           resources:
-            requests: { cpu: "10m", memory: "64Mi" }
-            limits:   { cpu: "100m", memory: "128Mi" }
+            requests: { cpu: "10m", memory: "128Mi" }
+            limits:   { cpu: "200m", memory: "256Mi" }
       volumes:
         - name: config
           configMap:
