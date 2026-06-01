@@ -13,3 +13,7 @@ nodes:
     alias: "Bottler.Motor01.Rpm"
   - browse_names: ["bottler", "SetpointTemperature"]
     alias: "Bottler.SetpointUnit.SetpointTemperature"
+  - browse_names: ["inspector", "GoodRate"]
+    alias: "Inspector.Inspector01.GoodRate"
+  - browse_names: ["labeler", "AlignmentScore"]
+    alias: "Labeler.Labeler01.AlignmentScore"

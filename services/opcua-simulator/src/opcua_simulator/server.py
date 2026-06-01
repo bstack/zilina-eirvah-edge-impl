@@ -22,6 +22,7 @@ from opcua_simulator.quality import QualityEmitter
 from opcua_simulator.rng import SimulatorRNG
 from opcua_simulator.setpoint import Setpoint
 from opcua_simulator.temperature import TemperatureDynamics
+from opcua_simulator.quality_rate import QualityRateDynamics
 from opcua_simulator.throughput import Throughput
 
 if TYPE_CHECKING:
@@ -51,6 +52,8 @@ class SimulatorRuntime:
         self._throughput: Throughput | None = None
         self._hot_spike: HotSpike | None = None
         self._quality_per_node: dict[str, QualityEmitter] = {}
+        self._quality_rate_nodes: dict[str, QualityRateDynamics] = {}
+        self._quality_rate_current: dict[str, float] = {}
         self._nodes_by_def_id: dict[str, Node] = {}
         self._server: Server | None = None
         self._ready: bool = False
@@ -120,6 +123,12 @@ class SimulatorRuntime:
                 bad_quality_pct=node_def.bad_quality_pct,
                 uncertain_quality_pct=node_def.uncertain_quality_pct,
             )
+            if node_def.dynamics == "quality_rate":
+                self._quality_rate_nodes[node_def.id] = QualityRateDynamics(
+                    target=float(node_def.initial),
+                    rng=self.rng,
+                )
+                self._quality_rate_current[node_def.id] = float(node_def.initial)
 
     async def _populate_address_space(self, ns_idx: int) -> None:
         assert self._server is not None and self._address_space is not None
@@ -170,6 +179,9 @@ class SimulatorRuntime:
             motor_state=self._motor.state, motor_rpm=self._motor.rpm
         )
 
+        for node_id, dyn in self._quality_rate_nodes.items():
+            self._quality_rate_current[node_id] = dyn.tick()
+
         defaults = self._address_space.uns_defaults
         for node_def in self._address_space.iter_nodes():
             labels = {
@@ -215,6 +227,8 @@ class SimulatorRuntime:
                 return int(self._motor.state)
             case "motor_rpm":
                 return float(self._motor.rpm)
+            case "quality_rate":
+                return float(self._quality_rate_current.get(node_def.id, float(node_def.initial)))
             case None if node_def.kind == "setpoint":
                 return float(self._setpoint.value)
             case _:
@@ -232,6 +246,8 @@ class SimulatorRuntime:
                 self.metrics.set_motor_state(labels, int(value))
             case "motor_rpm":
                 self.metrics.set_motor_rpm(labels, float(value))
+            case "quality_rate":
+                self.metrics.set_quality_rate(labels, float(value))
             case None if node_def.kind == "setpoint":
                 self.metrics.set_setpoint(labels, float(value))
 

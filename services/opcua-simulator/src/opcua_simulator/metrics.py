@@ -60,6 +60,12 @@ class SimulatorMetrics:
             labelnames=("trigger",),
             registry=registry,
         )
+        self._quality_rate = make_gauge(
+            "simulator_quality_rate_percent",
+            "Quality pass rate for inspector/labeler equipment (%).",
+            labelnames=_ISA95_LABELS,
+            registry=registry,
+        )
 
     def set_temperature(self, labels: dict[str, str], value: float) -> None:
         self._temperature.labels(**labels).set(value)
@@ -84,3 +90,6 @@ class SimulatorMetrics:
 
     def inc_hot_spike(self, *, trigger: str) -> None:
         self._hot_spikes.labels(trigger=trigger).inc()
+
+    def set_quality_rate(self, labels: dict[str, str], value: float) -> None:
+        self._quality_rate.labels(**labels).set(value)

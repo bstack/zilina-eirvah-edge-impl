@@ -65,3 +65,31 @@ equipments:
         policy:
           min: 15.0
           max: 30.0
+
+  - name: inspector
+    nodes:
+      - id: Inspector01.GoodRate
+        kind: measurement
+        cell: inspector
+        equipment: inspector_01
+        measurement: good_rate
+        value_type: double
+        unit: percent
+        initial: 98.0
+        semantic_type: quality.percent
+        dynamics: quality_rate
+        bad_quality_pct: 0.0
+
+  - name: labeler
+    nodes:
+      - id: Labeler01.AlignmentScore
+        kind: measurement
+        cell: labeler
+        equipment: labeler_01
+        measurement: alignment_score
+        value_type: double
+        unit: percent
+        initial: 97.0
+        semantic_type: quality.percent
+        dynamics: quality_rate
+        bad_quality_pct: 0.0
