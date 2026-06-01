@@ -35,18 +35,17 @@ def register_to_scale(raw: int, *, scale: int) -> float:
 
 @dataclass
 class RegisterBlock:
-    temperature_raw: int = 2200   # 22.00°C
-    setpoint_raw: int = 2200      # 22.00°C
+    fill_level_raw: int = 750    # 75.0% (scale ×10)
     motor_state: int = 1          # running
     throughput_raw: int = 80      # 0.80 bottles/s
 
     def as_list(self) -> list[int]:
-        return [self.temperature_raw, self.setpoint_raw, self.motor_state, self.throughput_raw]
+        return [self.fill_level_raw, self.motor_state, self.throughput_raw]
 
-    def tick(self, *, rng: random.Random, delta_max: int = 50) -> None:
+    def tick(self, *, rng: random.Random, delta_max: int = 20) -> None:
         span = abs(delta_max)
         delta = rng.randint(-span, span)
-        self.temperature_raw = max(1800, min(5000, self.temperature_raw + delta))
+        self.fill_level_raw = max(500, min(950, self.fill_level_raw + delta))
 
 
 class SimulatorRuntime:
@@ -63,7 +62,7 @@ class SimulatorRuntime:
 
     def _build_context(self) -> ModbusServerContext:
         store = ModbusSlaveContext(
-            hr=ModbusSequentialDataBlock(0, self._block.as_list() + [0] * 6),
+            hr=ModbusSequentialDataBlock(0, self._block.as_list() + [0] * 7),
         )
         return ModbusServerContext(slaves={self._settings.unit_id: store}, single=False)
 
@@ -76,9 +75,13 @@ class SimulatorRuntime:
                 self._context[self._settings.unit_id].setValues(
                     _HR, 0, self._block.as_list()
                 )
-            self._metrics.set_temperature(register_to_scale(self._block.temperature_raw, scale=100))
-            self._metrics.set_setpoint(register_to_scale(self._block.setpoint_raw, scale=100))
+            self._metrics.set_fill_level(
+                register_to_scale(self._block.fill_level_raw, scale=10)
+            )
             self._metrics.set_motor_state(self._block.motor_state)
+            self._metrics.set_throughput(
+                register_to_scale(self._block.throughput_raw, scale=100)
+            )
 
     async def run(self) -> None:
         self._context = self._build_context()
