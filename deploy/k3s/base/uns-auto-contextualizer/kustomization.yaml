@@ -3,6 +3,7 @@ kind: Kustomization
 resources:
   - deployment.yaml
   - service.yaml
+  - hpa.yaml
 configMapGenerator:
   - name: uns-auto-contextualizer-config
     files:

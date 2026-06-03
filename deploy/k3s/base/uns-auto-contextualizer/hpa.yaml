@@ -1,0 +1,27 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: uns-auto-contextualizer
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: uns-auto-contextualizer
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: AverageValue
+          averageValue: "60m"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 10
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 10
+    scaleDown:
+      stabilizationWindowSeconds: 20

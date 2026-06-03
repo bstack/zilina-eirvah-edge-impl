@@ -30,6 +30,19 @@ else
   echo "==> kind cluster '${CLUSTER}' already exists"
 fi
 
+# 1b. metrics-server (required for HPA — not bundled with kind)
+if ! kubectl get deployment metrics-server -n kube-system &>/dev/null; then
+  echo "==> installing metrics-server"
+  kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  # kind clusters use self-signed kubelet certs — insecure-tls required
+  kubectl patch deployment metrics-server -n kube-system \
+    --type=json \
+    -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+  kubectl -n kube-system rollout status deployment/metrics-server --timeout=90s
+else
+  echo "==> metrics-server already installed"
+fi
+
 # 2. Build + import images
 ./scripts/build_all.sh local
 
@@ -65,3 +78,4 @@ echo ""
 echo "    NOTE: Before first run, regenerate the Mosquitto password hash:"
 echo "    docker run --rm eclipse-mosquitto:2 mosquitto_passwd -c -b /tmp/p eirvah eirvah-dev-password"
 echo "    Then update deploy/k3s/base/mosquitto/secret.yaml with the output."
+

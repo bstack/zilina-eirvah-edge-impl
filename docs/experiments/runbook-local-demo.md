@@ -148,6 +148,140 @@ kubectl -n eirvah-edge delete pod -l app.kubernetes.io/name=actuation-signal-pub
 
 ---
 
+## Experiment C — Horizontal autoscaling under load
+
+**What you're showing:** `uns-auto-contextualizer` scales from 1 → N replicas when CPU exceeds threshold under synthetic NATS load, then scales back to 1 when load stops. The NATS queue-group subscription means replicas share work automatically with no code changes.
+
+**How it works:** `scripts/load_inject.py` publishes `NATSEnvelope` messages directly to `uns.work.contextualize` at 500/s (20× normal throughput), cycling all 21 node IDs. The HPA watches CPU utilisation against the pod's 10m request; when it exceeds 60% (6m actual) the HPA adds replicas up to a max of 5. Scale-up window is 15s so the transition is visible; scale-down holds for 60s so pods stay up while load is running.
+
+### Prerequisites
+
+**dev_up.sh now handles metrics-server automatically.** If the stack is already running, verify metrics are flowing (takes ~60s after metrics-server starts):
+
+```bash
+kubectl top pods -n eirvah-edge
+```
+
+Expected: CPU/memory values for all pods. If you see `Error from server (ServiceUnavailable)`, wait 30s and retry.
+
+**Port-forward NATS:**
+
+```bash
+kubectl -n eirvah-edge port-forward svc/nats 4222:4222 &>/tmp/pf-nats.log &
+```
+
+---
+
+### Step 1 — Establish baseline
+
+Confirm 1 replica, low CPU:
+
+```bash
+kubectl get hpa uns-auto-contextualizer -n eirvah-edge
+```
+
+Expected output:
+```
+NAME                     REFERENCE                           TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+uns-auto-contextualizer  Deployment/uns-auto-contextualizer  2%/60%    1         5         1          ...
+```
+
+Note the `TARGETS` column — left value is current CPU utilisation, right is threshold.
+
+---
+
+### Step 2 — Open watchers
+
+In two separate terminals:
+
+```bash
+# Terminal A — watch HPA decisions in real time
+kubectl get hpa uns-auto-contextualizer -n eirvah-edge -w
+
+# Terminal B — watch pod count change
+kubectl get pods -n eirvah-edge -l app.kubernetes.io/name=uns-auto-contextualizer -w
+```
+
+Optionally open Grafana (`http://localhost:3000`) and watch:
+- `rate(worker_handler_total{worker="uns-auto-contextualizer"}[10s])` — throughput across all replicas
+- `kube_horizontalpodautoscaler_status_current_replicas` — replica count over time
+
+---
+
+### Step 3 — Inject load
+
+In a new terminal:
+
+```bash
+uv run python scripts/load_inject.py --rate 500 --duration 120
+```
+
+Default: 500 messages/second for 120 seconds. The script reports actual throughput every 5s.
+
+---
+
+### Step 4 — Observe scale-out (expected timeline)
+
+| Time after inject starts | Event |
+|---|---|
+| 0–15 s | CPU climbs; HPA observes utilisation above 60% threshold |
+| ~15–30 s | HPA adds 2 replicas (scaleUp policy: +2 per 15s window) |
+| ~30–45 s | Further replicas added if CPU still above threshold; caps at 5 |
+| Steady state | 3–5 replicas sharing 500 msg/s; CPU per pod drops toward threshold |
+
+In Terminal A you should see `REPLICAS` increment and `TARGETS` drop as load spreads across pods.
+
+> **Note:** With a 10m CPU request and CPU-intensive rdflib SPARQL queries, utilisation will spike well above 60% at 500/s, likely driving the HPA to max replicas quickly. To see more gradual scaling, lower the rate: `--rate 150`.
+
+---
+
+### Step 5 — Verify correctness at scale
+
+While the injector runs, confirm the contextualizer is processing correctly (replies going to the SINK subject are discarded, but the worker still logs outcomes):
+
+```bash
+kubectl -n eirvah-edge logs -l app.kubernetes.io/name=uns-auto-contextualizer \
+  --prefix --tail=20 | grep -E "contextualizer_ready|outcome"
+```
+
+You should see log lines from multiple pod names, confirming all replicas are active.
+
+---
+
+### Step 6 — Observe scale-down
+
+After the injector finishes (or `Ctrl-C`):
+
+```bash
+# Injector done — watch HPA scale back to 1
+kubectl get hpa uns-auto-contextualizer -n eirvah-edge -w
+```
+
+The 60s `scaleDown.stabilizationWindowSeconds` means replicas drop after CPU has been below threshold for 60s. Expected: back to 1 replica within ~90s of load stopping.
+
+---
+
+### Step 7 — Screenshot artefacts
+
+Capture:
+1. **HPA watch output** — showing REPLICAS climbing from 1 → N then back to 1
+2. **Grafana: throughput panel** — `worker_handler_total` rate staying flat as replicas scale (queue drained consistently)
+3. **Grafana: replica panel** — `kube_horizontalpodautoscaler_status_current_replicas` step chart
+
+---
+
+### Step 8 — Cleanup
+
+```bash
+# Kill the port-forward
+kill %1 2>/dev/null
+
+# HPA stays deployed — remove it if you don't want it running permanently
+kubectl delete hpa uns-auto-contextualizer -n eirvah-edge
+```
+
+---
+
 ## Teardown
 
 ```bash

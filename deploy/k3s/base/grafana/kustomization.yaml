@@ -12,3 +12,4 @@ configMapGenerator:
     files:
       - bottling-line-state.json
       - eirvah-edge-pipeline.json
+      - autoscaling-dashboard.json
