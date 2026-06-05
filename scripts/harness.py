@@ -256,7 +256,10 @@ async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
             await _sleep(duration, cfg.dry_run)
 
             if proc is not None:
-                proc.terminate()
+                try:
+                    proc.terminate()
+                except ProcessLookupError:
+                    pass
                 await proc.wait()
 
             await _sleep(60, cfg.dry_run)
