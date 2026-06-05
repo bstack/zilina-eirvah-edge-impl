@@ -151,3 +151,51 @@ async def test_scraper_check_prometheus_raises_on_failure() -> None:
     with patch("harness.httpx.AsyncClient", return_value=mock_client):
         with pytest.raises(SystemExit):
             await scraper.check_connectivity()
+
+
+def test_scraper_flush_writes_parquet_and_csv(tmp_path: Path) -> None:
+    from harness import Scraper
+
+    scraper = Scraper(
+        prometheus_url="http://localhost:9090",
+        queries={},
+        interval=10.0,
+    )
+    scraper.rows = [
+        (1717584000.0, "pipeline_success_total", '{"job": "orch"}', 10.0),
+        (1717584010.0, "pipeline_success_total", '{"job": "orch"}', 12.0),
+        (1717584020.0, "pipeline_success_total", '{"job": "orch"}', 14.0),
+    ]
+
+    scraper.flush(tmp_path)
+
+    parquet_path = tmp_path / "raw.parquet"
+    assert parquet_path.exists()
+
+    csv_path = tmp_path / "summary.csv"
+    assert csv_path.exists()
+
+    table = pq.read_table(parquet_path)
+    assert table.schema.field("timestamp").type == pa.float64()
+    assert table.schema.field("metric").type == pa.string()
+    assert table.schema.field("labels").type == pa.string()
+    assert table.schema.field("value").type == pa.float64()
+    assert table.num_rows == 3
+
+    import pandas as pd
+    df = pd.read_csv(csv_path)
+    assert list(df.columns) == ["metric", "labels", "mean", "p50", "p95", "p99", "min", "max"]
+    assert len(df) == 1
+    assert abs(df.iloc[0]["mean"] - 12.0) < 0.01
+    assert abs(df.iloc[0]["min"] - 10.0) < 0.01
+    assert abs(df.iloc[0]["max"] - 14.0) < 0.01
+
+
+def test_scraper_flush_is_noop_when_no_rows(tmp_path: Path) -> None:
+    from harness import Scraper
+
+    scraper = Scraper(prometheus_url="http://localhost:9090", queries={}, interval=10.0)
+    scraper.flush(tmp_path)
+
+    assert not (tmp_path / "raw.parquet").exists()
+    assert not (tmp_path / "summary.csv").exists()

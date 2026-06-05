@@ -171,3 +171,36 @@ class Scraper:
                     )
             except Exception:
                 pass
+
+    def flush(self, out_dir: Path) -> None:
+        if not self.rows:
+            return
+        out_dir.mkdir(parents=True, exist_ok=True)
+
+        table = pa.table({
+            "timestamp": pa.array([r[0] for r in self.rows], type=pa.float64()),
+            "metric": pa.array([r[1] for r in self.rows], type=pa.string()),
+            "labels": pa.array([r[2] for r in self.rows], type=pa.string()),
+            "value": pa.array([r[3] for r in self.rows], type=pa.float64()),
+        })
+
+        parquet_path = out_dir / "raw.parquet"
+        if parquet_path.exists():
+            existing = pq.read_table(parquet_path)
+            table = pa.concat_tables([existing, table])
+        pq.write_table(table, parquet_path)
+
+        df = table.to_pandas()
+        summary = (
+            df.groupby(["metric", "labels"])["value"]
+            .agg(
+                mean="mean",
+                p50=lambda x: x.quantile(0.50),
+                p95=lambda x: x.quantile(0.95),
+                p99=lambda x: x.quantile(0.99),
+                min="min",
+                max="max",
+            )
+            .reset_index()
+        )
+        summary.to_csv(out_dir / "summary.csv", index=False)
