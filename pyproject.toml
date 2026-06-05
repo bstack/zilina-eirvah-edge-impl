@@ -78,4 +78,6 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "aiomqtt>=2.0",
+    "pyarrow>=16.0",
+    "pandas>=2.2",
 ]
