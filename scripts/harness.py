@@ -115,3 +115,59 @@ async def port_forward(
             await asyncio.wait_for(proc.wait(), timeout=5.0)
         except asyncio.TimeoutError:
             proc.kill()
+
+
+class Scraper:
+    def __init__(
+        self,
+        prometheus_url: str,
+        queries: dict[str, str],
+        interval: float = 10.0,
+    ) -> None:
+        self._url = prometheus_url
+        self._queries = queries
+        self._interval = interval
+        self.rows: list[tuple[float, str, str, float]] = []
+
+    async def check_connectivity(self) -> None:
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.get(f"{self._url}/-/healthy", timeout=5.0)
+                resp.raise_for_status()
+            except Exception as exc:
+                raise SystemExit(f"Prometheus unreachable at {self._url}: {exc}") from exc
+
+    async def run(self, stop: asyncio.Event) -> None:
+        async with httpx.AsyncClient() as client:
+            while True:
+                await self._poll_once(client)
+                if stop.is_set():
+                    break
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=self._interval)
+                except asyncio.TimeoutError:
+                    pass
+
+    async def _poll_once(self, client: httpx.AsyncClient) -> None:
+        ts = time.time()
+        for name, expr in self._queries.items():
+            try:
+                resp = await client.get(
+                    f"{self._url}/api/v1/query",
+                    params={"query": expr},
+                    timeout=5.0,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                for series in data["data"]["result"]:
+                    labels = {
+                        k: v
+                        for k, v in series["metric"].items()
+                        if k != "__name__"
+                    }
+                    value = float(series["value"][1])
+                    self.rows.append(
+                        (ts, name, json.dumps(labels, sort_keys=True), value)
+                    )
+            except Exception:
+                pass

@@ -89,3 +89,65 @@ async def test_port_forward_retries_on_immediate_exit() -> None:
                 pass
 
     alive_proc.terminate.assert_called_once()
+
+
+async def test_scraper_accumulates_rows_from_prometheus() -> None:
+    from harness import Scraper
+
+    prometheus_response = {
+        "status": "success",
+        "data": {
+            "resultType": "vector",
+            "result": [
+                {
+                    "metric": {"__name__": "pipeline_success_total", "job": "orchestrator"},
+                    "value": [1717584000.0, "42.0"],
+                }
+            ],
+        },
+    }
+
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.json = MagicMock(return_value=prometheus_response)
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(return_value=mock_resp)
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    scraper = Scraper(
+        prometheus_url="http://localhost:9090",
+        queries={"pipeline_success_total": "eirvah_pipeline_success_total"},
+        interval=10.0,
+    )
+
+    with patch("harness.httpx.AsyncClient", return_value=mock_client):
+        stop = asyncio.Event()
+        stop.set()  # stop immediately after first poll
+        await scraper.run(stop)
+
+    assert len(scraper.rows) == 1
+    ts, metric, labels, value = scraper.rows[0]
+    assert metric == "pipeline_success_total"
+    assert value == 42.0
+    assert '"job": "orchestrator"' in labels
+
+
+async def test_scraper_check_prometheus_raises_on_failure() -> None:
+    from harness import Scraper
+
+    scraper = Scraper(
+        prometheus_url="http://localhost:9090",
+        queries={},
+        interval=10.0,
+    )
+
+    mock_client = AsyncMock()
+    mock_client.get = AsyncMock(side_effect=httpx.ConnectError("refused"))
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+
+    with patch("harness.httpx.AsyncClient", return_value=mock_client):
+        with pytest.raises(SystemExit):
+            await scraper.check_connectivity()
