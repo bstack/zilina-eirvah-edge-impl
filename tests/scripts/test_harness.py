@@ -199,3 +199,32 @@ def test_scraper_flush_is_noop_when_no_rows(tmp_path: Path) -> None:
 
     assert not (tmp_path / "raw.parquet").exists()
     assert not (tmp_path / "summary.csv").exists()
+
+
+async def test_run_experiment_a_calls_disturbance_and_scrapes(tmp_path: Path) -> None:
+    from harness import HarnessConfig, run_experiment_a
+
+    cfg = HarnessConfig(experiment="a", dry_run=True, output_dir=tmp_path)
+
+    mock_scraper = MagicMock()
+    mock_scraper.check_connectivity = AsyncMock()
+    mock_scraper.run = AsyncMock()
+    mock_scraper.flush = MagicMock()
+    mock_scraper.rows = []
+
+    mock_proc = MagicMock()
+    mock_proc.returncode = None
+    mock_proc.terminate = MagicMock()
+    mock_proc.wait = AsyncMock()
+
+    out_dir = tmp_path / "experiment-a" / "run1"
+    out_dir.mkdir(parents=True)
+
+    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
+        with patch("harness.asyncio.sleep"):
+            with patch("harness.Scraper", return_value=mock_scraper):
+                result = await run_experiment_a(cfg, out_dir)
+
+    assert result["outcome"] == "ok"
+    mock_scraper.check_connectivity.assert_called_once()
+    mock_scraper.flush.assert_called_once_with(out_dir)

@@ -204,3 +204,57 @@ class Scraper:
             .reset_index()
         )
         summary.to_csv(out_dir / "summary.csv", index=False)
+
+
+_QUERIES_A: dict[str, str] = {
+    "pipeline_duration_sum": "eirvah_pipeline_duration_seconds_sum",
+    "pipeline_duration_count": "eirvah_pipeline_duration_seconds_count",
+    "pipeline_success_total": "eirvah_pipeline_success_total",
+    "actuation_requests_total": "eirvah_actuation_requests_total",
+}
+
+
+async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
+    scraper = Scraper(
+        prometheus_url=f"http://localhost:{cfg.prometheus_port}",
+        queries=_QUERIES_A,
+    )
+
+    async with port_forward("svc/prometheus", cfg.prometheus_port, 9090, cfg.namespace, cfg.dry_run):
+        async with port_forward("svc/opcua-simulator", cfg.opcua_port, 4840, cfg.namespace, cfg.dry_run):
+            await scraper.check_connectivity()
+
+            stop = asyncio.Event()
+            scraper_task = asyncio.create_task(scraper.run(stop))
+
+            await asyncio.sleep(30)
+
+            duration = cfg.duration or 360
+            dist_cmd = [
+                "uv", "run", "python", "scripts/disturbance.py",
+                "--interval", "120",
+                "--endpoint", f"opc.tcp://localhost:{cfg.opcua_port}/eirvah/simulator",
+            ]
+            if cfg.dry_run:
+                print(f"[dry-run] {' '.join(dist_cmd)}")
+                proc = None
+            else:
+                proc = await asyncio.create_subprocess_exec(
+                    *dist_cmd,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+
+            await asyncio.sleep(duration)
+
+            if proc is not None:
+                proc.terminate()
+                await proc.wait()
+
+            await asyncio.sleep(60)
+
+            stop.set()
+            await scraper_task
+            scraper.flush(out_dir)
+
+    return {"outcome": "ok"}
