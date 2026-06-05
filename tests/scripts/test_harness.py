@@ -228,3 +228,65 @@ async def test_run_experiment_a_calls_disturbance_and_scrapes(tmp_path: Path) ->
     assert result["outcome"] == "ok"
     mock_scraper.check_connectivity.assert_called_once()
     mock_scraper.flush.assert_called_once_with(out_dir)
+
+
+async def test_wait_for_pod_running_returns_true_on_success() -> None:
+    from harness import _wait_for_pod_running
+
+    mock_proc = MagicMock()
+    mock_proc.communicate = AsyncMock(return_value=(b"Running\n", b""))
+
+    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
+        with patch("harness.asyncio.sleep"):
+            result = await _wait_for_pod_running(
+                label="app.kubernetes.io/name=data-converter",
+                namespace="eirvah-edge",
+                timeout=30,
+            )
+
+    assert result is True
+
+
+async def test_wait_for_pod_running_returns_false_on_timeout() -> None:
+    from harness import _wait_for_pod_running
+
+    mock_proc = MagicMock()
+    mock_proc.communicate = AsyncMock(return_value=(b"Pending\n", b""))
+
+    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
+        with patch("harness.asyncio.sleep"):
+            result = await _wait_for_pod_running(
+                label="app.kubernetes.io/name=data-converter",
+                namespace="eirvah-edge",
+                timeout=1,
+            )
+
+    assert result is False
+
+
+async def test_run_experiment_b_records_timeout_in_outcome(tmp_path: Path) -> None:
+    from harness import HarnessConfig, run_experiment_b
+
+    cfg = HarnessConfig(experiment="b", dry_run=False, output_dir=tmp_path)
+    out_dir = tmp_path / "experiment-b" / "run1"
+    out_dir.mkdir(parents=True)
+
+    mock_scraper = MagicMock()
+    mock_scraper.check_connectivity = AsyncMock()
+    mock_scraper.run = AsyncMock()
+    mock_scraper.flush = MagicMock()
+    mock_scraper.rows = []
+
+    delete_proc = MagicMock()
+    delete_proc.returncode = None
+    delete_proc.terminate = MagicMock()
+    delete_proc.wait = AsyncMock()
+
+    with patch("harness.asyncio.create_subprocess_exec", return_value=delete_proc):
+        with patch("harness.asyncio.sleep"):
+            with patch("harness.Scraper", return_value=mock_scraper):
+                with patch("harness._wait_for_pod_running", return_value=False):
+                    result = await run_experiment_b(cfg, out_dir)
+
+    assert result["recovery_timed_out"] is True
+    mock_scraper.flush.assert_called_once_with(out_dir)

@@ -258,3 +258,87 @@ async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
             scraper.flush(out_dir)
 
     return {"outcome": "ok"}
+
+
+_QUERIES_B: dict[str, str] = {
+    "pipeline_success_total": "eirvah_pipeline_success_total",
+    "stage_timeout_total": "eirvah_pipeline_stage_timeout_total",
+    "e2e_latency_sum": "eirvah_pipeline_e2e_latency_seconds_sum",
+    "e2e_latency_count": "eirvah_pipeline_e2e_latency_seconds_count",
+}
+
+
+async def _wait_for_pod_running(
+    label: str,
+    namespace: str,
+    timeout: int = 120,
+) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        proc = await asyncio.create_subprocess_exec(
+            "kubectl", "get", "pod",
+            "-n", namespace,
+            "-l", label,
+            "-o", "jsonpath={.items[0].status.phase}",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await proc.communicate()
+        phase = stdout.decode().strip()
+        if phase == "Running":
+            return True
+        await asyncio.sleep(2.0)
+    return False
+
+
+async def _delete_pod_and_wait(
+    label: str,
+    namespace: str,
+    recovery_timeout: int,
+    dry_run: bool,
+) -> bool:
+    cmd = ["kubectl", "-n", namespace, "delete", "pod", "-l", label]
+    if dry_run:
+        print(f"[dry-run] {' '.join(cmd)}")
+        return True
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.DEVNULL,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+    await proc.wait()
+    return await _wait_for_pod_running(label, namespace, timeout=recovery_timeout)
+
+
+async def run_experiment_b(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
+    scraper = Scraper(
+        prometheus_url=f"http://localhost:{cfg.prometheus_port}",
+        queries=_QUERIES_B,
+    )
+    recovery_timeout = cfg.duration or 120
+    timed_out = False
+
+    async with port_forward("svc/prometheus", cfg.prometheus_port, 9090, cfg.namespace, cfg.dry_run):
+        await scraper.check_connectivity()
+
+        stop = asyncio.Event()
+        scraper_task = asyncio.create_task(scraper.run(stop))
+
+        await asyncio.sleep(30)
+
+        for label in [
+            "app.kubernetes.io/name=data-converter",
+            "app.kubernetes.io/name=opcua-data-subscriber",
+        ]:
+            recovered = await _delete_pod_and_wait(
+                label, cfg.namespace, recovery_timeout, cfg.dry_run
+            )
+            if not recovered:
+                timed_out = True
+            await asyncio.sleep(60)
+
+        stop.set()
+        await scraper_task
+        scraper.flush(out_dir)
+
+    return {"outcome": "ok", "recovery_timed_out": timed_out}
