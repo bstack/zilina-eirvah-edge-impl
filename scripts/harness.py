@@ -342,3 +342,56 @@ async def run_experiment_b(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
         scraper.flush(out_dir)
 
     return {"outcome": "ok", "recovery_timed_out": timed_out}
+
+
+_QUERIES_C: dict[str, str] = {
+    "worker_handler_total": 'worker_handler_total{worker="uns-auto-contextualizer"}',
+    "hpa_replicas": "kube_horizontalpodautoscaler_status_current_replicas",
+    "cpu_usage": 'container_cpu_usage_seconds_total{container="uns-auto-contextualizer"}',
+}
+
+
+async def run_experiment_c(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
+    scraper = Scraper(
+        prometheus_url=f"http://localhost:{cfg.prometheus_port}",
+        queries=_QUERIES_C,
+    )
+    load_duration = cfg.duration or 120
+
+    async with port_forward("svc/prometheus", cfg.prometheus_port, 9090, cfg.namespace, cfg.dry_run):
+        async with port_forward("svc/nats", cfg.nats_port, 4222, cfg.namespace, cfg.dry_run):
+            await scraper.check_connectivity()
+
+            stop = asyncio.Event()
+            scraper_task = asyncio.create_task(scraper.run(stop))
+
+            await asyncio.sleep(30)
+
+            inject_cmd = [
+                "uv", "run", "python", "scripts/load_inject.py",
+                "--rate", str(cfg.rate),
+                "--duration", str(load_duration),
+                "--nats-url", f"nats://localhost:{cfg.nats_port}",
+            ]
+            if cfg.dry_run:
+                print(f"[dry-run] {' '.join(inject_cmd)}")
+                proc = None
+            else:
+                proc = await asyncio.create_subprocess_exec(
+                    *inject_cmd,
+                    stdout=asyncio.subprocess.DEVNULL,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+
+            await asyncio.sleep(load_duration)
+
+            if proc is not None:
+                await proc.wait()
+
+            await asyncio.sleep(90)
+
+            stop.set()
+            await scraper_task
+            scraper.flush(out_dir)
+
+    return {"outcome": "ok"}

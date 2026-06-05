@@ -290,3 +290,31 @@ async def test_run_experiment_b_records_timeout_in_outcome(tmp_path: Path) -> No
 
     assert result["recovery_timed_out"] is True
     mock_scraper.flush.assert_called_once_with(out_dir)
+
+
+async def test_run_experiment_c_launches_load_injector(tmp_path: Path) -> None:
+    from harness import HarnessConfig, run_experiment_c
+
+    cfg = HarnessConfig(experiment="c", dry_run=True, rate=500, output_dir=tmp_path)
+    out_dir = tmp_path / "experiment-c" / "run1"
+    out_dir.mkdir(parents=True)
+
+    mock_scraper = MagicMock()
+    mock_scraper.check_connectivity = AsyncMock()
+    mock_scraper.run = AsyncMock()
+    mock_scraper.flush = MagicMock()
+    mock_scraper.rows = []
+
+    mock_proc = MagicMock()
+    mock_proc.returncode = None
+    mock_proc.terminate = MagicMock()
+    mock_proc.wait = AsyncMock()
+
+    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
+        with patch("harness.asyncio.sleep"):
+            with patch("harness.Scraper", return_value=mock_scraper):
+                result = await run_experiment_c(cfg, out_dir)
+
+    assert result["outcome"] == "ok"
+    mock_scraper.check_connectivity.assert_called_once()
+    mock_scraper.flush.assert_called_once_with(out_dir)
