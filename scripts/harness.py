@@ -212,10 +212,12 @@ class Scraper:
 
 
 _QUERIES_A: dict[str, str] = {
-    "pipeline_duration_sum": "eirvah_pipeline_duration_seconds_sum",
-    "pipeline_duration_count": "eirvah_pipeline_duration_seconds_count",
+    "pipeline_e2e_latency_sum": "eirvah_pipeline_e2e_latency_seconds_sum",
+    "pipeline_e2e_latency_count": "eirvah_pipeline_e2e_latency_seconds_count",
     "pipeline_success_total": "eirvah_pipeline_success_total",
-    "actuation_requests_total": "eirvah_actuation_requests_total",
+    "actuation_approved_total": "eirvah_actuation_approved_total",
+    "temperature_celsius": "eirvah_simulator_temperature_celsius",
+    "setpoint_writes_total": "eirvah_simulator_setpoint_writes_total",
 }
 
 
@@ -351,9 +353,9 @@ async def run_experiment_b(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
 
 
 _QUERIES_C: dict[str, str] = {
-    "worker_handler_total": 'worker_handler_total{worker="uns-auto-contextualizer"}',
+    "worker_handler_total": 'eirvah_worker_handler_total{worker="uns-auto-contextualizer"}',
     "hpa_replicas": "kube_horizontalpodautoscaler_status_current_replicas",
-    "cpu_usage": 'container_cpu_usage_seconds_total{container="uns-auto-contextualizer"}',
+    "hpa_desired_replicas": "kube_horizontalpodautoscaler_status_desired_replicas",
 }
 
 
