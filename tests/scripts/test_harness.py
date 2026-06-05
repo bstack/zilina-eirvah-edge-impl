@@ -230,6 +230,32 @@ async def test_run_experiment_a_calls_disturbance_and_scrapes(tmp_path: Path) ->
     mock_scraper.flush.assert_called_once_with(out_dir)
 
 
+def test_parse_args_experiment_a() -> None:
+    from harness import parse_args
+
+    cfg = parse_args(["run", "--experiment", "a"])
+    assert cfg.experiment == "a"
+    assert cfg.namespace == "eirvah-edge"
+    assert cfg.dry_run is False
+    assert cfg.prometheus_port == 9090
+
+
+def test_parse_args_dry_run_flag() -> None:
+    from harness import parse_args
+
+    cfg = parse_args(["run", "--experiment", "c", "--rate", "200", "--dry-run"])
+    assert cfg.experiment == "c"
+    assert cfg.rate == 200
+    assert cfg.dry_run is True
+
+
+def test_parse_args_invalid_experiment_exits() -> None:
+    from harness import parse_args
+
+    with pytest.raises(SystemExit):
+        parse_args(["run", "--experiment", "z"])
+
+
 async def test_wait_for_pod_running_returns_true_on_success() -> None:
     from harness import _wait_for_pod_running
 

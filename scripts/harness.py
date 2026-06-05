@@ -395,3 +395,106 @@ async def run_experiment_c(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
             scraper.flush(out_dir)
 
     return {"outcome": "ok"}
+
+
+_cleanup_callbacks: list[Callable[[], None]] = []
+
+
+def _run_cleanup() -> None:
+    for fn in _cleanup_callbacks:
+        try:
+            fn()
+        except Exception:
+            pass
+
+
+atexit.register(_run_cleanup)
+
+
+def _handle_sigterm(signum: int, frame: object) -> None:
+    _run_cleanup()
+    sys.exit(0)
+
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
+
+
+def parse_args(argv: list[str] | None = None) -> HarnessConfig:
+    parser = argparse.ArgumentParser(description="EirVah experiment harness")
+    sub = parser.add_subparsers(dest="command", required=True)
+    run_p = sub.add_parser("run", help="Run an experiment and collect metrics")
+    run_p.add_argument("--experiment", required=True, choices=["a", "b", "c"])
+    run_p.add_argument("--namespace", default="eirvah-edge")
+    run_p.add_argument("--prometheus-port", type=int, default=9090, dest="prometheus_port")
+    run_p.add_argument("--nats-port", type=int, default=4222, dest="nats_port")
+    run_p.add_argument("--opcua-port", type=int, default=4840, dest="opcua_port")
+    run_p.add_argument("--output-dir", type=Path, default=Path("results"), dest="output_dir")
+    run_p.add_argument("--duration", type=int, default=None)
+    run_p.add_argument("--rate", type=int, default=500)
+    run_p.add_argument("--dry-run", action="store_true", dest="dry_run")
+    args = parser.parse_args(argv)
+    return HarnessConfig(
+        experiment=args.experiment,
+        namespace=args.namespace,
+        prometheus_port=args.prometheus_port,
+        nats_port=args.nats_port,
+        opcua_port=args.opcua_port,
+        output_dir=args.output_dir,
+        duration=args.duration,
+        rate=args.rate,
+        dry_run=args.dry_run,
+    )
+
+
+_EXPERIMENTS = {
+    "a": run_experiment_a,
+    "b": run_experiment_b,
+    "c": run_experiment_c,
+}
+
+
+async def _run(cfg: HarnessConfig) -> None:
+    run_ts = datetime.now(UTC).strftime("%Y-%m-%dT%H-%M-%S")
+    out_dir = setup_output_dir(cfg.output_dir, cfg.experiment, run_ts)
+    git_sha = _current_git_sha()
+    start_time = datetime.now(UTC).isoformat()
+
+    def _on_exit() -> None:
+        if not (out_dir / "run.json").exists():
+            write_run_json(
+                out_dir=out_dir,
+                experiment=cfg.experiment,
+                params={"duration": cfg.duration, "rate": cfg.rate},
+                start_time=start_time,
+                end_time=datetime.now(UTC).isoformat(),
+                outcome="interrupted",
+                git_sha=git_sha,
+            )
+
+    _cleanup_callbacks.append(_on_exit)
+
+    print(f"[harness] experiment={cfg.experiment}  out={out_dir}  dry_run={cfg.dry_run}")
+
+    fn = _EXPERIMENTS[cfg.experiment]
+    result = await fn(cfg, out_dir)
+
+    end_time = datetime.now(UTC).isoformat()
+    write_run_json(
+        out_dir=out_dir,
+        experiment=cfg.experiment,
+        params={"duration": cfg.duration, "rate": cfg.rate},
+        start_time=start_time,
+        end_time=end_time,
+        outcome=result.get("outcome", "ok"),
+        git_sha=git_sha,
+    )
+    print(f"[harness] done  outcome={result.get('outcome')}  out={out_dir}")
+
+
+def main() -> None:
+    cfg = parse_args()
+    asyncio.run(_run(cfg))
+
+
+if __name__ == "__main__":
+    main()
