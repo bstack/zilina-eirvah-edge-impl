@@ -226,7 +226,7 @@ async def test_run_experiment_a_calls_disturbance_and_scrapes(tmp_path: Path) ->
                 result = await run_experiment_a(cfg, out_dir)
 
     assert result["outcome"] == "ok"
-    mock_scraper.check_connectivity.assert_called_once()
+    mock_scraper.check_connectivity.assert_not_called()  # dry_run skips connectivity check
     mock_scraper.flush.assert_called_once_with(out_dir)
 
 
@@ -342,5 +342,5 @@ async def test_run_experiment_c_launches_load_injector(tmp_path: Path) -> None:
                 result = await run_experiment_c(cfg, out_dir)
 
     assert result["outcome"] == "ok"
-    mock_scraper.check_connectivity.assert_called_once()
+    mock_scraper.check_connectivity.assert_not_called()  # dry_run skips connectivity check
     mock_scraper.flush.assert_called_once_with(out_dir)

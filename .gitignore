@@ -163,3 +163,4 @@ secrets/
 .uv/
 .tilt-cache/
 *.local.env
+results/

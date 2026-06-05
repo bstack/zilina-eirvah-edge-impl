@@ -61,6 +61,11 @@ def write_run_json(
     (out_dir / "run.json").write_text(json.dumps(data, indent=2))
 
 
+async def _sleep(seconds: float, dry_run: bool) -> None:
+    if not dry_run:
+        await asyncio.sleep(seconds)
+
+
 def _current_git_sha() -> str:
     try:
         return subprocess.check_output(
@@ -222,12 +227,13 @@ async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
 
     async with port_forward("svc/prometheus", cfg.prometheus_port, 9090, cfg.namespace, cfg.dry_run):
         async with port_forward("svc/opcua-simulator", cfg.opcua_port, 4840, cfg.namespace, cfg.dry_run):
-            await scraper.check_connectivity()
+            if not cfg.dry_run:
+                await scraper.check_connectivity()
 
             stop = asyncio.Event()
             scraper_task = asyncio.create_task(scraper.run(stop))
 
-            await asyncio.sleep(30)
+            await _sleep(30, cfg.dry_run)
 
             duration = cfg.duration or 360
             dist_cmd = [
@@ -245,13 +251,13 @@ async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
                     stderr=asyncio.subprocess.PIPE,
                 )
 
-            await asyncio.sleep(duration)
+            await _sleep(duration, cfg.dry_run)
 
             if proc is not None:
                 proc.terminate()
                 await proc.wait()
 
-            await asyncio.sleep(60)
+            await _sleep(60, cfg.dry_run)
 
             stop.set()
             await scraper_task
@@ -324,7 +330,7 @@ async def run_experiment_b(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
         stop = asyncio.Event()
         scraper_task = asyncio.create_task(scraper.run(stop))
 
-        await asyncio.sleep(30)
+        await _sleep(30, cfg.dry_run)
 
         for label in [
             "app.kubernetes.io/name=data-converter",
@@ -335,7 +341,7 @@ async def run_experiment_b(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
             )
             if not recovered:
                 timed_out = True
-            await asyncio.sleep(60)
+            await _sleep(60, cfg.dry_run)
 
         stop.set()
         await scraper_task
@@ -360,12 +366,13 @@ async def run_experiment_c(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
 
     async with port_forward("svc/prometheus", cfg.prometheus_port, 9090, cfg.namespace, cfg.dry_run):
         async with port_forward("svc/nats", cfg.nats_port, 4222, cfg.namespace, cfg.dry_run):
-            await scraper.check_connectivity()
+            if not cfg.dry_run:
+                await scraper.check_connectivity()
 
             stop = asyncio.Event()
             scraper_task = asyncio.create_task(scraper.run(stop))
 
-            await asyncio.sleep(30)
+            await _sleep(30, cfg.dry_run)
 
             inject_cmd = [
                 "uv", "run", "python", "scripts/load_inject.py",
@@ -383,12 +390,12 @@ async def run_experiment_c(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
                     stderr=asyncio.subprocess.PIPE,
                 )
 
-            await asyncio.sleep(load_duration)
+            await _sleep(load_duration, cfg.dry_run)
 
             if proc is not None:
                 await proc.wait()
 
-            await asyncio.sleep(90)
+            await _sleep(90, cfg.dry_run)
 
             stop.set()
             await scraper_task
