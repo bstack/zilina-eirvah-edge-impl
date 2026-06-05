@@ -68,3 +68,50 @@ def _current_git_sha() -> str:
         ).strip()
     except Exception:
         return "unknown"
+
+
+@asynccontextmanager
+async def port_forward(
+    resource: str,
+    local_port: int,
+    remote_port: int,
+    namespace: str,
+    dry_run: bool = False,
+) -> AsyncGenerator[None, None]:
+    cmd = [
+        "kubectl", "port-forward",
+        "-n", namespace,
+        resource,
+        f"{local_port}:{remote_port}",
+    ]
+    if dry_run:
+        print(f"[dry-run] {' '.join(cmd)}")
+        yield
+        return
+
+    proc: asyncio.subprocess.Process | None = None
+    for attempt in range(2):
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.sleep(0.5)
+        if proc.returncode is None:
+            break
+        if attempt == 0:
+            await asyncio.sleep(2.0)
+
+    if proc is None or proc.returncode is not None:
+        raise RuntimeError(
+            f"port-forward failed after 2 attempts: {resource} {local_port}:{remote_port}"
+        )
+
+    try:
+        yield
+    finally:
+        proc.terminate()
+        try:
+            await asyncio.wait_for(proc.wait(), timeout=5.0)
+        except asyncio.TimeoutError:
+            proc.kill()
