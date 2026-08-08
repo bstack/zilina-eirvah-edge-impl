@@ -31,7 +31,7 @@ data:
           - targets: ["rabbitmq.eirvah-edge.svc.cluster.local:15692"]
       - job_name: nats
         static_configs:
-          - targets: ["nats.eirvah-edge.svc.cluster.local:8222"]
+          - targets: ["nats.eirvah-edge.svc.cluster.local:7777"]
       - job_name: kube-state-metrics
         static_configs:
           - targets: ["kube-state-metrics.eirvah-edge.svc.cluster.local:8080"]

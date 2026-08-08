@@ -29,3 +29,14 @@ spec:
           resources:
             requests: { cpu: "20m", memory: "64Mi" }
             limits:   { cpu: "200m", memory: "256Mi" }
+        # NATS's own monitor port (8222) serves varz/connz/etc as JSON, not
+        # Prometheus text format — this sidecar translates for the "nats"
+        # Prometheus scrape job (see deploy/k3s/base/prometheus/configmap.yaml).
+        - name: nats-exporter
+          image: natsio/prometheus-nats-exporter:0.15.0
+          args: ["-varz", "-connz", "-routez", "-subz", "-p", "7777", "http://localhost:8222"]
+          ports:
+            - { name: metrics, containerPort: 7777 }
+          resources:
+            requests: { cpu: "10m", memory: "32Mi" }
+            limits:   { cpu: "100m", memory: "64Mi" }

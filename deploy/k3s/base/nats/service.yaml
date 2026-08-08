@@ -8,3 +8,4 @@ spec:
   ports:
     - { name: client,  port: 4222, targetPort: 4222 }
     - { name: monitor, port: 8222, targetPort: 8222 }
+    - { name: metrics, port: 7777, targetPort: 7777 }
