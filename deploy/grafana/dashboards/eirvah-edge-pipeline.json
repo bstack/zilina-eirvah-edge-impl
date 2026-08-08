@@ -187,7 +187,7 @@
       "title": "Actuation Approved",
       "gridPos": {"h": 4, "w": 6, "x": 0, "y": 21},
       "id": 21,
-      "targets": [{"expr": "round(sum(increase(eirvah_actuation_approved_total{path=\"actuation\"}[5m])))", "legendFormat": "approved"}],
+      "targets": [{"expr": "round(sum(increase(eirvah_actuation_approved_total{path=\"actuation\"}[5m])))", "legendFormat": "approved", "instant": true, "range": false}],
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value", "graphMode": "area"}
     },
     {
@@ -195,7 +195,7 @@
       "title": "Actuation Rejected",
       "gridPos": {"h": 4, "w": 6, "x": 6, "y": 21},
       "id": 22,
-      "targets": [{"expr": "round(sum by (reason)(increase(eirvah_actuation_rejected_total{path=\"actuation\"}[5m])))", "legendFormat": "{{ reason }}"}],
+      "targets": [{"expr": "round(sum by (reason)(increase(eirvah_actuation_rejected_total{path=\"actuation\"}[5m])))", "legendFormat": "{{ reason }}", "instant": true, "range": false}],
       "options": {"reduceOptions": {"calcs": ["lastNotNull"]}, "colorMode": "value"}
     },
     {
