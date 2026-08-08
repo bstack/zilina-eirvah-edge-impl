@@ -110,17 +110,17 @@ Prometheus scrapes `/metrics` from every pod (including the three brokers); Graf
 
 None of this is exposed outside the cluster by default — `kubectl -n eirvah-edge port-forward svc/<name> <local>:<remote>` first (`dev_up.sh` prints the exact commands). Credentials below are dev-only defaults from `deploy/k3s/base/*/secret.yaml` — regenerate before using this outside a local sandbox.
 
-| Component | Port-forward | URL / address | Credentials |
+| Component | Port-forward command | URL / address | Credentials |
 |---|---|---|---|
-| Grafana | `svc/grafana 3000:3000` | http://localhost:3000 | `admin` / `eirvah-dev-grafana` |
-| Prometheus | `svc/prometheus 9090:9090` | http://localhost:9090 | none (no auth) |
-| RabbitMQ management UI | `svc/rabbitmq 15672:15672` | http://localhost:15672 | `eirvah` / `eirvah-dev-password` |
-| RabbitMQ AMQP | `svc/rabbitmq 5672:5672` | `amqp://localhost:5672` | `eirvah` / `eirvah-dev-password` |
-| Mosquitto (MQTT) | `svc/mosquitto 1883:1883` | `mqtt://localhost:1883` | `eirvah` / `eirvah-dev-password` (anonymous auth disabled) |
-| NATS | `svc/nats 4222:4222` | `nats://localhost:4222` | none (no auth, no JetStream) |
-| OPC UA simulator | `svc/opcua-simulator 4840:4840` | `opc.tcp://localhost:4840` | none |
-| Modbus simulator | `svc/modbus-simulator 5020:5020` | `localhost:5020` | none |
-| S7 simulator | `svc/s7-simulator 102:102` | `localhost:102` | none |
+| Grafana | `kubectl -n eirvah-edge port-forward svc/grafana 3000:3000` | http://localhost:3000 | `admin` / `eirvah-dev-grafana` |
+| Prometheus | `kubectl -n eirvah-edge port-forward svc/prometheus 9090:9090` | http://localhost:9090 | none (no auth) |
+| RabbitMQ management UI | `kubectl -n eirvah-edge port-forward svc/rabbitmq 15672:15672` | http://localhost:15672 | `eirvah` / `eirvah-dev-password` |
+| RabbitMQ AMQP | `kubectl -n eirvah-edge port-forward svc/rabbitmq 5672:5672` | `amqp://localhost:5672` | `eirvah` / `eirvah-dev-password` |
+| Mosquitto (MQTT) | `kubectl -n eirvah-edge port-forward svc/mosquitto 1883:1883` | `mqtt://localhost:1883` | `eirvah` / `eirvah-dev-password` (anonymous auth disabled) |
+| NATS | `kubectl -n eirvah-edge port-forward svc/nats 4222:4222` | `nats://localhost:4222` | none (no auth, no JetStream) |
+| OPC UA simulator | `kubectl -n eirvah-edge port-forward svc/opcua-simulator 4840:4840` | `opc.tcp://localhost:4840` | none |
+| Modbus simulator | `kubectl -n eirvah-edge port-forward svc/modbus-simulator 5020:5020` | `localhost:5020` | none |
+| S7 simulator | `kubectl -n eirvah-edge port-forward svc/s7-simulator 102:102` | `localhost:102` | none |
 
 ## Key documents
 
