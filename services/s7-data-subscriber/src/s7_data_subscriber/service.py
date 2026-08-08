@@ -95,7 +95,7 @@ class SubscriberRuntime:
         self._bus: BusClient | None = None
         self._ready = False
         self._connection_state = make_gauge(
-            "s7_ingress_connection_state",
+            "ingress_connection_state",
             "1 when S7 TCP connection is up, 0 otherwise",
             labelnames=["ingress", "state"],
         )

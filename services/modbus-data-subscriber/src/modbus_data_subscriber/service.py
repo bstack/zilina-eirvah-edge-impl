@@ -89,7 +89,7 @@ class SubscriberRuntime:
         self._bus: BusClient | None = None
         self._ready = False
         self._connection_state = make_gauge(
-            "modbus_ingress_connection_state",
+            "ingress_connection_state",
             "1 when the Modbus TCP connection is up, 0 otherwise",
             labelnames=["ingress", "state"],
         )
