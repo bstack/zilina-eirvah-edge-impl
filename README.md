@@ -126,6 +126,7 @@ None of this is exposed outside the cluster by default — `kubectl -n eirvah-ed
 
 - Spec: [`docs/superpowers/specs/2026-05-16-eirvah-edge-vertical-slice-design.md`](docs/superpowers/specs/2026-05-16-eirvah-edge-vertical-slice-design.md)
 - Plans: [`docs/superpowers/plans/`](docs/superpowers/plans/)
+- Manual demo tests (actuation success/failure, disturbance): [`TESTING.md`](TESTING.md)
 - PhD proposal (companion): `UNIZA_Project_Proposal__EirVah__...pdf`
 
 ## Prerequisites
