@@ -108,6 +108,12 @@
           "expr": "eirvah_ingress_connection_state{state=\"connected\"}",
           "legendFormat": "{{ingress}}",
           "refId": "A"
+        },
+        {
+          "datasource": { "type": "prometheus", "uid": "eirvah-prometheus" },
+          "expr": "up{job=\"nats\"}",
+          "legendFormat": "nats",
+          "refId": "B"
         }
       ]
     },
