@@ -24,18 +24,20 @@ spec:
           readinessProbe:
             exec:
               command: ["rabbitmq-diagnostics", "-q", "ping"]
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 10
-            timeoutSeconds: 10
+            timeoutSeconds: 15
+            failureThreshold: 5
           livenessProbe:
             exec:
               command: ["rabbitmq-diagnostics", "-q", "status"]
-            initialDelaySeconds: 30
+            initialDelaySeconds: 60
             periodSeconds: 20
-            timeoutSeconds: 10
+            timeoutSeconds: 15
+            failureThreshold: 5
           resources:
             requests: { cpu: "100m", memory: "256Mi" }
-            limits:   { cpu: "500m", memory: "512Mi" }
+            limits:   { cpu: "1000m", memory: "512Mi" }
       volumes:
         - name: config
           configMap:
