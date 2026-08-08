@@ -97,6 +97,24 @@ def test_actuation_metrics_create_without_error() -> None:
     m.observe_e2e_latency(path="actuation", seconds=0.05)
 
 
+def test_actuation_metrics_pre_registers_known_rejection_reasons() -> None:
+    """Every known reason has a 0 sample from construction — without this,
+    increase()/rate() over a lone rejection reads back as 0 forever, since
+    prometheus_client only creates a labeled series on its first .inc()."""
+    from actuation_control_orchestrator.metrics import (
+        KNOWN_REJECTION_REASONS,
+        ActuationMetrics,
+    )
+
+    reg = CollectorRegistry()
+    ActuationMetrics(registry=reg)
+
+    for reason in KNOWN_REJECTION_REASONS:
+        assert reg.get_sample_value(
+            "eirvah_actuation_rejected_total", {"path": "actuation", "reason": reason}
+        ) == 0
+
+
 # ── pipeline runner ──────────────────────────────────────────────────────────
 
 @pytest.mark.asyncio
@@ -147,6 +165,70 @@ async def test_run_actuation_pipeline_approve_writes_disabled() -> None:
     body = json.loads(amqp_exchange_mock.publish.call_args[0][0].body)
     assert body["decision"] == "reject"
     assert body["rejection_reason"] == "writes_disabled"
+
+
+@pytest.mark.asyncio
+async def test_run_actuation_pipeline_policy_reject_uses_stable_metric_label() -> None:
+    """Validator rejects on policy → AMQP keeps the free-text reason, but the
+    metric is labeled with the bounded reason_code (not the free text) so
+    increase()/rate() over per-value rejection messages doesn't read back as 0."""
+    from actuation_control_orchestrator.metrics import ActuationMetrics
+    from actuation_control_orchestrator.pipeline import run_actuation_pipeline
+
+    req = _sample_request()
+    envelope = _actuation_envelope(req)
+    cfg = _make_cfg()
+
+    validation_reject = ValidationResult(
+        decision="reject",
+        reason="value 99.0 outside policy range [20.0, 30.0]",
+        reason_code="out_of_range",
+    )
+
+    async def fake_request_reply(*, nc, subject, payload, correlation_id, timeout_s):
+        msg = MagicMock()
+        reply = NATSEnvelope(
+            correlation_id=correlation_id,
+            payload=validation_reject.model_dump(mode="json"),
+        )
+        msg.data = reply.model_dump_json().encode()
+        return msg
+
+    nc_mock = MagicMock()
+    nc_mock.publish = AsyncMock()
+    amqp_exchange_mock = MagicMock()
+    amqp_exchange_mock.publish = AsyncMock()
+
+    reg = CollectorRegistry()
+    metrics = ActuationMetrics(registry=reg)
+
+    await run_actuation_pipeline(
+        envelope=envelope,
+        cfg=cfg,
+        nc=nc_mock,
+        amqp_results_exchange=amqp_exchange_mock,
+        metrics=metrics,
+        allow_writes=True,
+        request_reply_fn=fake_request_reply,
+    )
+
+    # AMQP result keeps the full, human-readable rejection reason.
+    body = json.loads(amqp_exchange_mock.publish.call_args[0][0].body)
+    assert body["decision"] == "reject"
+    assert body["rejection_reason"] == "value 99.0 outside policy range [20.0, 30.0]"
+
+    # The metric is labeled with the bounded reason_code, not the free text.
+    sample_value = reg.get_sample_value(
+        "eirvah_actuation_rejected_total", {"path": "actuation", "reason": "out_of_range"}
+    )
+    assert sample_value == 1
+    assert (
+        reg.get_sample_value(
+            "eirvah_actuation_rejected_total",
+            {"path": "actuation", "reason": "value 99.0 outside policy range [20.0, 30.0]"},
+        )
+        is None
+    )
 
 
 @pytest.mark.asyncio

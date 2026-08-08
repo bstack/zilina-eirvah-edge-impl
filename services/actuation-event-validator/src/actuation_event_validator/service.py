@@ -49,11 +49,13 @@ def validate_request(
         return ValidationResult(
             decision="reject",
             reason=f"no policy for topic {req.target_uns_topic!r}",
+            reason_code="no_policy",
         )
     if req.requester not in policy.allowlist:
         return ValidationResult(
             decision="reject",
             reason=f"requester {req.requester!r} not in allowlist",
+            reason_code="not_allowlisted",
         )
     try:
         value = float(req.requested_value)  # type: ignore[arg-type]
@@ -61,12 +63,14 @@ def validate_request(
         return ValidationResult(
             decision="reject",
             reason="requested_value is not numeric",
+            reason_code="not_numeric",
         )
     lo, hi = policy.allowed_range
     if not (lo <= value <= hi):
         return ValidationResult(
             decision="reject",
             reason=f"value {value} outside policy range [{lo}, {hi}]",
+            reason_code="out_of_range",
         )
     return ValidationResult(decision="approve")
 

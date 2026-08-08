@@ -12,11 +12,24 @@ from eirvah_contracts.ulid import is_valid_correlation_id
 from eirvah_contracts.uns import parse_uns_topic
 
 
+RejectionReasonCode = Literal["out_of_range", "not_allowlisted", "no_policy", "not_numeric"]
+"""Stable, bounded rejection categories — used as a Prometheus label.
+
+`ValidationResult.reason` is free text (embeds the offending value/requester/topic)
+and must never be used as a metric label: prometheus_client creates labeled series
+lazily on first use, so a label value that's different every time (e.g. one per
+rejected numeric value) never accumulates the pre-increment sample `increase()`
+needs, and each one-off rejection reads back as 0 forever. `reason_code` is the
+finite category counterpart callers should label metrics with instead.
+"""
+
+
 class ValidationResult(BaseModel):
     """Returned by actuation-event-validator on act.work.validate (spec §3.2)."""
 
     decision: Literal["approve", "reject"]
     reason: str | None = None
+    reason_code: RejectionReasonCode | None = None
 
 
 class ActuationRequest(BaseModel):

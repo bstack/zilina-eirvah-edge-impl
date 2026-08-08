@@ -46,6 +46,7 @@ def test_validate_approve(tmp_path: Path) -> None:
     result = validate_request(_sample_request(value=22.0), policies)
     assert result.decision == "approve"
     assert result.reason is None
+    assert result.reason_code is None
 
 
 def test_validate_reject_out_of_range(tmp_path: Path) -> None:
@@ -56,6 +57,9 @@ def test_validate_reject_out_of_range(tmp_path: Path) -> None:
     assert result.decision == "reject"
     assert result.reason is not None
     assert "outside policy range" in result.reason
+    # reason_code is the bounded counterpart to the free-text reason — the
+    # metric label callers should use instead of `reason` (see actuation.py).
+    assert result.reason_code == "out_of_range"
 
 
 def test_validate_reject_unknown_requester(tmp_path: Path) -> None:
@@ -66,6 +70,7 @@ def test_validate_reject_unknown_requester(tmp_path: Path) -> None:
     assert result.decision == "reject"
     assert result.reason is not None
     assert "allowlist" in result.reason
+    assert result.reason_code == "not_allowlisted"
 
 
 def test_validate_reject_unknown_topic(tmp_path: Path) -> None:
@@ -79,6 +84,16 @@ def test_validate_reject_unknown_topic(tmp_path: Path) -> None:
     assert result.decision == "reject"
     assert result.reason is not None
     assert "no policy" in result.reason
+    assert result.reason_code == "no_policy"
+
+
+def test_validate_reject_not_numeric(tmp_path: Path) -> None:
+    from actuation_event_validator.service import load_policy, validate_request
+
+    policies = load_policy(_write_policy(tmp_path))
+    result = validate_request(_sample_request(value="not-a-number"), policies)  # type: ignore[arg-type]
+    assert result.decision == "reject"
+    assert result.reason_code == "not_numeric"
 
 
 def test_load_policy_from_yaml(tmp_path: Path) -> None:

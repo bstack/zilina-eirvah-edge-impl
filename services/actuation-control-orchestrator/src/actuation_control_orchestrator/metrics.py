@@ -5,6 +5,22 @@ from __future__ import annotations
 from eirvah_observability.metrics import make_counter, make_histogram
 from prometheus_client.registry import REGISTRY, CollectorRegistry
 
+# Every rejection category this service ever labels a metric with. Bounded and
+# known ahead of time (unlike the free-text rejection message), so each one can
+# be pre-touched at startup — see ActuationMetrics.__init__.
+KNOWN_REJECTION_REASONS = (
+    "out_of_range",
+    "not_allowlisted",
+    "no_policy",
+    "not_numeric",
+    "policy_reject",  # fallback if a validator reply omits reason_code
+    "expired",
+    "validate_timeout",
+    "bad_validate_reply",
+    "writes_disabled",
+    "write_timeout",
+)
+
 
 class ActuationMetrics:
     def __init__(self, registry: CollectorRegistry = REGISTRY) -> None:
@@ -32,6 +48,13 @@ class ActuationMetrics:
             labelnames=["path"],
             registry=registry,
         )
+
+        # prometheus_client only creates a labeled series on first .inc(), with no
+        # earlier 0 sample to diff against — so increase()/rate() reads a lone
+        # rejection back as 0 forever. Touching every known reason at 0 up front
+        # gives each one a real baseline before it's ever incremented.
+        for reason in KNOWN_REJECTION_REASONS:
+            self._rejected.labels(path="actuation", reason=reason).inc(0)
 
     def inc_approved(self, *, path: str) -> None:
         self._approved.labels(path=path).inc()

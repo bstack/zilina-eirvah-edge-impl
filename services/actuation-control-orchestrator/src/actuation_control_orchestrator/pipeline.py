@@ -87,14 +87,14 @@ async def run_actuation_pipeline(
         validation = ValidationResult.model_validate(reply_env.payload)
     except Exception as exc:
         _log.warning("validate_bad_reply", error=str(exc), correlation_id=correlation_id)
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="BadValidateReply")
-        metrics.inc_rejected(path=_PATH, reason="BadValidateReply")
+        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="bad_validate_reply")
+        metrics.inc_rejected(path=_PATH, reason="bad_validate_reply")
         return
 
     if validation.decision == "reject":
         reason = validation.reason or "rejected"
         await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason=reason)
-        metrics.inc_rejected(path=_PATH, reason=reason)
+        metrics.inc_rejected(path=_PATH, reason=validation.reason_code or "policy_reject")
         return
 
     # Safety gate
