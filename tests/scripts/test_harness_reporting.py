@@ -257,3 +257,15 @@ async def test_stale_samples_are_flagged(tmp_path: Path) -> None:
     report = json.loads((tmp_path / "collection.json").read_text())
     assert report["complete"] is False
     assert "stale" in report["issues"][0]["reason"]
+
+
+async def test_child_unicode_logs_work_with_windows_parent_encoding(tmp_path: Path) -> None:
+    with patch.dict("os.environ", {"PYTHONIOENCODING": "cp1252"}):
+        result = await harness._run_child(
+            [sys.executable, "-c", "print('22\\u00b0C \\u2192 30\\u00b0C')"],
+            tmp_path,
+            "disturbance",
+            timeout=5,
+        )
+    assert result["exit_code"] == 0
+    assert "22°C → 30°C" in (tmp_path / "disturbance.stdout.log").read_text(encoding="utf-8")

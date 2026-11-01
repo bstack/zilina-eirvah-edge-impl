@@ -12,6 +12,20 @@ uv run python scripts/harness.py run --experiment c --dry-run
 
 Commands use the currently selected Kubernetes context. Select and verify the research context before executing them. Scenario B deletes worker pods; do not run it against an unrelated cluster. No deployment or cluster creation is performed by the harness.
 
+## Local setup
+
+Use Python 3.12 and the tested uv 0.4.20 version, matching the service Dockerfiles. From the repository root:
+
+```powershell
+uv --version
+uv sync --frozen
+uv run --frozen python -c "import asyncua, httpx, pyarrow, nats; from eirvah_contracts.envelope import NATSEnvelope; print('Experiment dependencies ready')"
+```
+
+The root `tool.uv.dev-dependencies` declaration installs the workspace services and experiment/test packages. In particular, the disturbance subprocess gets `asyncua` through the OPC UA service dependencies; no manual `pip install` or `uv run --with asyncua` is required. uv 0.4.20 does not read the newer `[dependency-groups]` declaration and does not support `sync --all-packages`.
+
+If uv is absent or a different version is selected, install the tested version with `python -m pip install uv==0.4.20`. The lockfile controls package versions; ordinary setup uses `--frozen` and does not regenerate it. A future uv upgrade should update host instructions and Dockerfile pins together and revalidate workspace setup.
+
 ## Run outcomes
 
 - `ok`: experiment actions completed and required queried metrics were collected without recorded gaps. This is not proof of full architecture conformance or zero loss.

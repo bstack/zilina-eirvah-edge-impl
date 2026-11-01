@@ -7,6 +7,7 @@ import asyncio
 import csv
 import json
 import math
+import os
 import signal
 import subprocess
 import sys
@@ -283,7 +284,9 @@ async def _run_child(
         (out_dir / f"{name}.stdout.log").open("wb") as stdout,
         (out_dir / f"{name}.stderr.log").open("wb") as stderr,
     ):
-        proc = await asyncio.create_subprocess_exec(*cmd, stdout=stdout, stderr=stderr)
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, stdout=stdout, stderr=stderr, env={**os.environ, "PYTHONIOENCODING": "utf-8"}
+        )
         try:
             await asyncio.wait_for(proc.wait(), timeout=timeout)
         except TimeoutError:

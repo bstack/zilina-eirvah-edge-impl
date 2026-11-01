@@ -133,15 +133,19 @@ None of this is exposed outside the cluster by default — `kubectl -n eirvah-ed
 
 - macOS, Linux, or Windows (Git Bash/WSL)
 - Python 3.12 (managed by uv — no system Python needed)
-- [uv](https://github.com/astral-sh/uv)
+- [uv](https://github.com/astral-sh/uv) 0.4.20 (the tested version, also pinned in service Dockerfiles)
 - Docker
 - [kind](https://kind.sigs.k8s.io/)
 - kubectl (bundles kustomize — no separate kustomize binary needed)
 
+The root development dependencies use `tool.uv.dev-dependencies` so uv 0.4.20 installs them. This includes the OPC UA client required by the local disturbance script and the metrics/export packages required by the harness. Do not use `uv sync --all-packages` with this version.
+
+To install the tested tool version if needed: `python -m pip install uv==0.4.20`. Check it with `uv --version`. Use `uv sync --frozen` for normal setup; maintainers run `uv lock` only when intentionally updating dependency declarations or versions.
+
 ## Getting started
 
 ```bash
-uv sync                       # install workspace + dev deps
+uv sync --frozen              # install the locked workspace + development/experiment dependencies
 ./scripts/dev_up.sh           # create kind cluster, build, deploy
 # Grafana + port-forward hints printed at the end; open Grafana and switch to
 # the "Bottling Line State" or "EirVah Edge Pipeline" dashboard

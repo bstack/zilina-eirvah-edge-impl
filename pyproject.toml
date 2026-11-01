@@ -8,6 +8,36 @@ license = { text = "Apache-2.0" }
 
 [tool.uv]
 package = false
+# uv 0.4.20 (also pinned in service Dockerfiles) reads this development group.
+dev-dependencies = [
+    "eirvah-contracts",
+    "eirvah-bus",
+    "eirvah-observability",
+    "opcua-simulator",
+    "opcua-data-subscriber",
+    "data-converter",
+    "uns-auto-contextualizer",
+    "mqtt-uns-publisher",
+    "uns-contextualizer-orchestrator",
+    "amqp-actuation-event-subscriber",
+    "actuation-control-orchestrator",
+    "actuation-event-validator",
+    "actuation-signal-publisher",
+    "decision-agent-stub",
+    "modbus-simulator",
+    "modbus-data-subscriber",
+    "s7-simulator",
+    "s7-data-subscriber",
+    "aio-pika>=9.0",
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "httpx>=0.27",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "aiomqtt>=2.0",
+    "pyarrow>=16.0",
+    "pandas>=2.2",
+]
 
 [tool.uv.workspace]
 members = [
@@ -50,34 +80,3 @@ modbus-simulator                         = { workspace = true }
 modbus-data-subscriber                   = { workspace = true }
 s7-simulator                             = { workspace = true }
 s7-data-subscriber                       = { workspace = true }
-
-[dependency-groups]
-dev = [
-    "eirvah-contracts",
-    "eirvah-bus",
-    "eirvah-observability",
-    "opcua-simulator",
-    "opcua-data-subscriber",
-    "data-converter",
-    "uns-auto-contextualizer",
-    "mqtt-uns-publisher",
-    "uns-contextualizer-orchestrator",
-    "amqp-actuation-event-subscriber",
-    "actuation-control-orchestrator",
-    "actuation-event-validator",
-    "actuation-signal-publisher",
-    "decision-agent-stub",
-    "modbus-simulator",
-    "modbus-data-subscriber",
-    "s7-simulator",
-    "s7-data-subscriber",
-    "aio-pika>=9.0",
-    "pytest>=8.3",
-    "pytest-asyncio>=0.24",
-    "httpx>=0.27",
-    "ruff>=0.6",
-    "mypy>=1.11",
-    "aiomqtt>=2.0",
-    "pyarrow>=16.0",
-    "pandas>=2.2",
-]
