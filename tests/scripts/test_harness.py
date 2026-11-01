@@ -1,4 +1,5 @@
 """Unit tests for the experiment harness."""
+
 from __future__ import annotations
 
 import asyncio
@@ -48,7 +49,9 @@ async def test_port_forward_spawns_and_terminates_process() -> None:
     mock_proc.wait = AsyncMock()
 
     with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc) as mock_exec:
-        async with port_forward("svc/prometheus", local_port=9090, remote_port=9090, namespace="eirvah-edge"):
+        async with port_forward(
+            "svc/prometheus", local_port=9090, remote_port=9090, namespace="eirvah-edge"
+        ):
             pass
 
     mock_exec.assert_called_once()
@@ -64,7 +67,13 @@ async def test_port_forward_dry_run_does_not_spawn() -> None:
     from harness import port_forward
 
     with patch("harness.asyncio.create_subprocess_exec") as mock_exec:
-        async with port_forward("svc/prometheus", local_port=9090, remote_port=9090, namespace="eirvah-edge", dry_run=True):
+        async with port_forward(
+            "svc/prometheus",
+            local_port=9090,
+            remote_port=9090,
+            namespace="eirvah-edge",
+            dry_run=True,
+        ):
             pass
 
     mock_exec.assert_not_called()
@@ -83,10 +92,14 @@ async def test_port_forward_retries_on_immediate_exit() -> None:
     alive_proc.terminate = MagicMock()
     alive_proc.wait = AsyncMock()
 
-    with patch("harness.asyncio.create_subprocess_exec", side_effect=[dead_proc, alive_proc]):
-        with patch("harness.asyncio.sleep"):
-            async with port_forward("svc/prometheus", local_port=9090, remote_port=9090, namespace="eirvah-edge"):
-                pass
+    with (
+        patch("harness.asyncio.create_subprocess_exec", side_effect=[dead_proc, alive_proc]),
+        patch("harness.asyncio.sleep"),
+    ):
+        async with port_forward(
+            "svc/prometheus", local_port=9090, remote_port=9090, namespace="eirvah-edge"
+        ):
+            pass
 
     alive_proc.terminate.assert_called_once()
 
@@ -128,7 +141,7 @@ async def test_scraper_accumulates_rows_from_prometheus() -> None:
         await scraper.run(stop)
 
     assert len(scraper.rows) == 1
-    ts, metric, labels, value = scraper.rows[0]
+    _ts, metric, labels, value = scraper.rows[0]
     assert metric == "pipeline_success_total"
     assert value == 42.0
     assert '"job": "orchestrator"' in labels
@@ -148,9 +161,11 @@ async def test_scraper_check_prometheus_raises_on_failure() -> None:
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("harness.httpx.AsyncClient", return_value=mock_client):
-        with pytest.raises(SystemExit):
-            await scraper.check_connectivity()
+    with (
+        patch("harness.httpx.AsyncClient", return_value=mock_client),
+        pytest.raises(httpx.ConnectError),
+    ):
+        await scraper.check_connectivity()
 
 
 def test_scraper_flush_writes_parquet_and_csv(tmp_path: Path) -> None:
@@ -183,22 +198,24 @@ def test_scraper_flush_writes_parquet_and_csv(tmp_path: Path) -> None:
     assert table.num_rows == 3
 
     import pandas as pd
+
     df = pd.read_csv(csv_path)
-    assert list(df.columns) == ["metric", "labels", "mean", "p50", "p95", "p99", "min", "max"]
     assert len(df) == 1
-    assert abs(df.iloc[0]["mean"] - 12.0) < 0.01
-    assert abs(df.iloc[0]["min"] - 10.0) < 0.01
-    assert abs(df.iloc[0]["max"] - 14.0) < 0.01
+    assert df.iloc[0]["kind"] == "counter"
+    assert df.iloc[0]["increase"] == 4
+    assert df.iloc[0]["rate_per_second"] == 0.2
+    assert "p95" not in df.columns
 
 
-def test_scraper_flush_is_noop_when_no_rows(tmp_path: Path) -> None:
+def test_scraper_flush_retains_empty_evidence_when_no_rows(tmp_path: Path) -> None:
     from harness import Scraper
 
     scraper = Scraper(prometheus_url="http://localhost:9090", queries={}, interval=10.0)
     scraper.flush(tmp_path)
 
-    assert not (tmp_path / "raw.parquet").exists()
-    assert not (tmp_path / "summary.csv").exists()
+    assert (tmp_path / "raw.parquet").exists()
+    assert (tmp_path / "summary.csv").exists()
+    assert json.loads((tmp_path / "collection.json").read_text())["complete"] is False
 
 
 async def test_run_experiment_a_calls_disturbance_and_scrapes(tmp_path: Path) -> None:
@@ -220,14 +237,16 @@ async def test_run_experiment_a_calls_disturbance_and_scrapes(tmp_path: Path) ->
     out_dir = tmp_path / "experiment-a" / "run1"
     out_dir.mkdir(parents=True)
 
-    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
-        with patch("harness.asyncio.sleep"):
-            with patch("harness.Scraper", return_value=mock_scraper):
-                result = await run_experiment_a(cfg, out_dir)
+    with (
+        patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc),
+        patch("harness.asyncio.sleep"),
+        patch("harness.Scraper", return_value=mock_scraper),
+    ):
+        result = await run_experiment_a(cfg, out_dir)
 
-    assert result["outcome"] == "ok"
+    assert result["outcome"] == "dry_run"
     mock_scraper.check_connectivity.assert_not_called()  # dry_run skips connectivity check
-    mock_scraper.flush.assert_called_once_with(out_dir)
+    mock_scraper.flush.assert_not_called()
 
 
 def test_parse_args_experiment_a() -> None:
@@ -260,15 +279,18 @@ async def test_wait_for_pod_running_returns_true_on_success() -> None:
     from harness import _wait_for_pod_running
 
     mock_proc = MagicMock()
+    mock_proc.returncode = 0
     mock_proc.communicate = AsyncMock(return_value=(b"Running\n", b""))
 
-    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
-        with patch("harness.asyncio.sleep"):
-            result = await _wait_for_pod_running(
-                label="app.kubernetes.io/name=data-converter",
-                namespace="eirvah-edge",
-                timeout=30,
-            )
+    with (
+        patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc),
+        patch("harness.asyncio.sleep"),
+    ):
+        result = await _wait_for_pod_running(
+            label="app.kubernetes.io/name=data-converter",
+            namespace="eirvah-edge",
+            timeout=30,
+        )
 
     assert result is True
 
@@ -277,45 +299,29 @@ async def test_wait_for_pod_running_returns_false_on_timeout() -> None:
     from harness import _wait_for_pod_running
 
     mock_proc = MagicMock()
+    mock_proc.returncode = 0
     mock_proc.communicate = AsyncMock(return_value=(b"Pending\n", b""))
 
-    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
-        with patch("harness.asyncio.sleep"):
-            result = await _wait_for_pod_running(
-                label="app.kubernetes.io/name=data-converter",
-                namespace="eirvah-edge",
-                timeout=1,
-            )
+    with (
+        patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc),
+        patch("harness.asyncio.sleep"),
+    ):
+        result = await _wait_for_pod_running(
+            label="app.kubernetes.io/name=data-converter",
+            namespace="eirvah-edge",
+            timeout=1,
+        )
 
     assert result is False
 
 
-async def test_run_experiment_b_records_timeout_in_outcome(tmp_path: Path) -> None:
-    from harness import HarnessConfig, run_experiment_b
+def test_run_experiment_b_records_timeout_in_outcome(tmp_path: Path) -> None:
+    from harness import _result
 
-    cfg = HarnessConfig(experiment="b", dry_run=False, output_dir=tmp_path)
-    out_dir = tmp_path / "experiment-b" / "run1"
-    out_dir.mkdir(parents=True)
-
-    mock_scraper = MagicMock()
-    mock_scraper.check_connectivity = AsyncMock()
-    mock_scraper.run = AsyncMock()
-    mock_scraper.flush = MagicMock()
-    mock_scraper.rows = []
-
-    delete_proc = MagicMock()
-    delete_proc.returncode = None
-    delete_proc.terminate = MagicMock()
-    delete_proc.wait = AsyncMock()
-
-    with patch("harness.asyncio.create_subprocess_exec", return_value=delete_proc):
-        with patch("harness.asyncio.sleep"):
-            with patch("harness.Scraper", return_value=mock_scraper):
-                with patch("harness._wait_for_pod_running", return_value=False):
-                    result = await run_experiment_b(cfg, out_dir)
-
+    (tmp_path / "collection.json").write_text('{"complete": true}')
+    result = _result(tmp_path, {}, recovery_timed_out=True)
+    assert result["outcome"] == "failed"
     assert result["recovery_timed_out"] is True
-    mock_scraper.flush.assert_called_once_with(out_dir)
 
 
 async def test_run_experiment_c_launches_load_injector(tmp_path: Path) -> None:
@@ -336,11 +342,13 @@ async def test_run_experiment_c_launches_load_injector(tmp_path: Path) -> None:
     mock_proc.terminate = MagicMock()
     mock_proc.wait = AsyncMock()
 
-    with patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc):
-        with patch("harness.asyncio.sleep"):
-            with patch("harness.Scraper", return_value=mock_scraper):
-                result = await run_experiment_c(cfg, out_dir)
+    with (
+        patch("harness.asyncio.create_subprocess_exec", return_value=mock_proc),
+        patch("harness.asyncio.sleep"),
+        patch("harness.Scraper", return_value=mock_scraper),
+    ):
+        result = await run_experiment_c(cfg, out_dir)
 
-    assert result["outcome"] == "ok"
+    assert result["outcome"] == "dry_run"
     mock_scraper.check_connectivity.assert_not_called()  # dry_run skips connectivity check
-    mock_scraper.flush.assert_called_once_with(out_dir)
+    mock_scraper.flush.assert_not_called()

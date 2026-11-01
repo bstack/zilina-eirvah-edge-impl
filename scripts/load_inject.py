@@ -21,9 +21,10 @@ import asyncio
 import json
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from itertools import cycle
+from pathlib import Path
 
 import nats
 from eirvah_contracts.envelope import NATSEnvelope
@@ -124,6 +125,7 @@ async def run(
     nats_url: str,
     timeout: float = 5.0,
     max_pending: int = 1000,
+    summary_path: Path | None = None,
 ) -> LoadStats:
     if rate <= 0 or duration <= 0 or timeout <= 0 or max_pending <= 0:
         raise ValueError("rate, duration, timeout and max_pending must be positive")
@@ -187,6 +189,22 @@ async def run(
         await nc.close()
 
     elapsed = time.monotonic() - start
+    summary = {
+        **asdict(stats),
+        "send_rate_per_second": stats.sent / sending_elapsed,
+        "completion_rate_per_second": stats.succeeded / elapsed,
+        "sending_elapsed_seconds": sending_elapsed,
+        "elapsed_seconds": elapsed,
+        "target_rate": rate,
+        "duration": duration,
+        "timeout": timeout,
+        "max_pending": max_pending,
+        "subject": SUBJECT,
+        "scope": "contextualizer only; sent counts request attempts; timeouts are unknown outcomes",
+    }
+    if summary_path is not None:
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(summary, indent=2, allow_nan=False), encoding="utf-8")
     print("", flush=True)
     print(
         f"done sent={stats.sent} succeeded={stats.succeeded} errors={stats.errors} "
@@ -203,6 +221,9 @@ def main() -> None:
     parser.add_argument("--duration", type=int, default=120, help="seconds to run (default: 120)")
     parser.add_argument("--nats-url", default="nats://localhost:4222", help="NATS server URL")
     parser.add_argument("--timeout", type=float, default=5.0, help="reply timeout in seconds")
+    parser.add_argument(
+        "--summary-json", type=Path, help="save machine-readable final counts and rates"
+    )
     parser.add_argument(
         "--max-pending",
         type=int,
@@ -221,6 +242,7 @@ def main() -> None:
                 nats_url=args.nats_url,
                 timeout=args.timeout,
                 max_pending=args.max_pending,
+                summary_path=args.summary_json,
             )
         )
     except KeyboardInterrupt:
