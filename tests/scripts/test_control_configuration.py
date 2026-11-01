@@ -92,3 +92,14 @@ def test_value_type_mismatch_does_not_pass_validator() -> None:
     command = build_command("conveyor", "start")
     altered = command.model_copy(update={"requested_value": "true"})
     assert validate_request(altered, policies).decision == "reject"
+
+
+def test_single_decision_agent_stops_before_replacement_starts() -> None:
+    import yaml
+
+    deployment = yaml.safe_load(
+        (ROOT / "deploy/k3s/base/decision-agent-stub/deployment.yaml").read_text(encoding="utf-8")
+    )
+    assert deployment["spec"]["replicas"] == 1
+    assert deployment["spec"].get("strategy", {}).get("type") == "Recreate"
+    assert not deployment["spec"]["strategy"].get("rollingUpdate")

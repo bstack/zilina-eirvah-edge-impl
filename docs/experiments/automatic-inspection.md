@@ -37,6 +37,8 @@ The decision service subscribes to the inspection topic and existing rejected-bo
 
 The service ignores bad-quality, invalid, future or stale inputs, inconsistent inner/outer inspection timestamps and wrong units. In-memory deduplication covers both inspection identity and session/bottle identity, retains entries for the freshness budget plus ten seconds, and fails closed at capacity instead of evicting live entries. Repeat polling or MQTT redelivery does not produce another request within this window. The device also rejects another rejection of the same bottle in its retained window, without incrementing the rejection count again.
 
+The decision deployment uses one replica and the `Recreate` strategy: the old pod stops before its replacement starts. This prevents normal rolling-update overlap from creating concurrent decision agents. There is a decision-service interruption during replacement; the latest-snapshot input can miss inspections during this gap. Keep the decision service at one replica until coordinated ownership is implemented.
+
 This is not durable exactly-once processing. Decision-service restart clears its in-memory state; a still-fresh inspection can be submitted again and is then subject to device duplicate protection. No automatic retry is made after ambiguous outcomes. A lost result or command failure must be investigated rather than silently retried.
 
 `DECISION_AGENT_STUB_INSPECTION_ENABLED=false` disables automatic rejection independently of `DECISION_AGENT_STUB_ENABLED`, which controls the warmer rule. Disable automatic rejection when running isolated manual rejector tests.
