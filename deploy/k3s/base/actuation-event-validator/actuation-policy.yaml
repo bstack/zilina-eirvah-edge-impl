@@ -62,3 +62,4 @@ policies:
     - 65535
     allowlist:
     - experiment-driver
+    - decision-agent-stub

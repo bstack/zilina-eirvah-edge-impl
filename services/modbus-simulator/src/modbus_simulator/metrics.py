@@ -79,6 +79,30 @@ class SimulatorMetrics:
             registry=registry,
         )
 
+        self._inspected = make_gauge(
+            "modbus_simulator_inspected_bottles_total",
+            "Sampled bottles inspected",
+            labelnames=[],
+            registry=registry,
+        )
+        self._inspection_failed = make_gauge(
+            "modbus_simulator_failed_inspections_total",
+            "Failed sampled bottle inspections",
+            labelnames=[],
+            registry=registry,
+        )
+        self._last_inspected = make_gauge(
+            "modbus_simulator_last_inspected_bottle_id",
+            "Last inspected bottle ID",
+            labelnames=[],
+            registry=registry,
+        )
+
+    def set_inspection(self, inspected: int, failed: int, bottle: int) -> None:
+        self._inspected.set(inspected)
+        self._inspection_failed.set(failed)
+        self._last_inspected.set(bottle)
+
     def set_control_feedback(self, a: float, b: float, c: float, d: float) -> None:
         self._control_valve_open.set(a)
         self._control_conveyor_running.set(b)

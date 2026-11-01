@@ -71,3 +71,7 @@ Modbus feedback addresses 8–11 and the S7 DB3 feedback are polled by the exist
 Tests cover separate motor/valve state, range/type rejection, start/reset interlocks, bottle identity/window handling, configuration bindings, feedback contextualization and real loopback Modbus/S7 writes. Fault injection is deterministic in fixtures. Kubernetes deployment and cross-service AMQP behaviour still require the local functional rehearsal after rebuilding the relevant images.
 
 Rebuild `modbus-simulator`, `s7-simulator`, `actuation-signal-publisher` and `actuation-event-validator`; load those images into kind. Apply the local Kustomize overlay to update policies, native routes, subscriber maps, ontology, conversion rules and dashboards. Restart any changed image using the same `:local` tag. Do not delete the cluster or rebuild unrelated images solely for this stage. Preserve results and use the explicit `kind-eirvah-edge` context.
+
+## Automatic rejection
+
+The decision service can now reject failed sampled inspections automatically. See [automatic inspection](automatic-inspection.md) for the pattern, identity contract, confirmation checks and delivery limits. Disable `DECISION_AGENT_STUB_INSPECTION_ENABLED` during isolated manual rejector checks.

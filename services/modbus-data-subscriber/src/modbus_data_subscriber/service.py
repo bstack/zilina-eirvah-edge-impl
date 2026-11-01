@@ -1,4 +1,5 @@
 """Modbus TCP data subscriber — polls registers, publishes to uns.ingress.raw."""
+
 from __future__ import annotations
 
 import asyncio
@@ -11,6 +12,7 @@ import yaml
 from eirvah_bus.client import BusClient
 from eirvah_bus.request_reply import BUS_HEADER_CORRELATION_ID
 from eirvah_contracts.envelope import NATSEnvelope
+from eirvah_contracts.inspection import BottleInspection
 from eirvah_contracts.signals import RawSignalEnvelope, SignalValueType
 from eirvah_contracts.ulid import generate_correlation_id
 from eirvah_observability.health import HealthApp
@@ -38,6 +40,25 @@ class RegisterMapConfig(BaseModel):
     unit_id: int = 1
     poll_interval_ms: int = 500
     registers: list[RegisterConfig]
+    inspection_address: int | None = None
+
+
+def decode_inspection(registers: list[int]) -> BottleInspection | None:
+    if len(registers) != 10 or any(type(v) is not int or not 0 <= v <= 65535 for v in registers):
+        raise ValueError("invalid inspection snapshot")
+    session = sum(registers[i] << (48 - i * 16) for i in range(4))
+    sequence, bottle, status = registers[4:7]
+    if status == 0:
+        return None
+    if status not in (1, 2) or session == 0 or sequence == 0:
+        raise ValueError("invalid inspection identity/status")
+    millis = (registers[7] << 32) | (registers[8] << 16) | registers[9]
+    return BottleInspection(
+        inspection_id=f"{session:016x}:{sequence:04x}",
+        bottle_id=bottle,
+        passed=status == 1,
+        inspected_at=datetime.fromtimestamp(millis / 1000, UTC),
+    )
 
 
 def load_register_map(path: Path) -> RegisterMapConfig:
@@ -88,6 +109,7 @@ class SubscriberRuntime:
         self._settings = settings
         self._bus: BusClient | None = None
         self._ready = False
+        self._last_inspection_id: str | None = None
         self._connection_state = make_gauge(
             "ingress_connection_state",
             "1 when the Modbus TCP connection is up, 0 otherwise",
@@ -117,6 +139,9 @@ class SubscriberRuntime:
         source_endpoint = f"modbus-tcp://{cfg.host}:{cfg.port}"
         interval = cfg.poll_interval_ms / 1000.0
         addresses = [r.address for r in cfg.registers]
+        start = min(addresses)
+        if cfg.inspection_address is not None:
+            addresses.extend([cfg.inspection_address, cfg.inspection_address + 9])
         start = min(addresses)
         count = max(addresses) - start + 1
 
@@ -148,6 +173,43 @@ class SubscriberRuntime:
                         )
                     )
                     await self._publish(envelope)
+                if cfg.inspection_address is not None:
+                    offset = cfg.inspection_address - start
+                    inspection = decode_inspection(result.registers[offset : offset + 10])
+                    if inspection is not None:
+                        if inspection.inspection_id != self._last_inspection_id:
+                            if self._last_inspection_id is not None:
+                                previous_session, previous_sequence = (
+                                    self._last_inspection_id.split(":")
+                                )
+                                session, sequence = inspection.inspection_id.split(":")
+                                if (
+                                    session == previous_session
+                                    and int(sequence, 16) > int(previous_sequence, 16) + 1
+                                ):
+                                    _log.warning(
+                                        "inspection_snapshot_gap",
+                                        previous=self._last_inspection_id,
+                                        current=inspection.inspection_id,
+                                    )
+                            _log.info(
+                                "bottle_inspection_observed",
+                                inspection_id=inspection.inspection_id,
+                                bottle_id=inspection.bottle_id,
+                                passed=inspection.passed,
+                            )
+                            self._last_inspection_id = inspection.inspection_id
+                        raw_inspection = RawSignalEnvelope(
+                            source_endpoint=source_endpoint,
+                            node_id="Inspector01.BottleInspection",
+                            value=inspection.model_dump_json(),
+                            value_type="string",
+                            quality="good",
+                            source_timestamp=inspection.inspected_at,
+                            server_timestamp=inspection.inspected_at,
+                            received_at=received_at,
+                        )
+                        await self._publish(wrap_in_nats_envelope(raw_inspection))
 
     async def _publish(self, envelope: NATSEnvelope) -> None:
         assert self._bus is not None

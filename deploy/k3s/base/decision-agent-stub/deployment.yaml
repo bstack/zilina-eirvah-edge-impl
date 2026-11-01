@@ -36,6 +36,8 @@ spec:
               value: "22.0"
             - name: DECISION_AGENT_STUB_HIGH_SETPOINT
               value: "26.0"
+            - name: DECISION_AGENT_STUB_INSPECTION_ENABLED
+              value: "true"
           resources:
             requests: { cpu: "10m", memory: "64Mi" }
             limits:   { cpu: "100m", memory: "128Mi" }

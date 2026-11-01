@@ -1,4 +1,5 @@
 """Settings for the Modbus TCP simulator."""
+
 from __future__ import annotations
 
 from pydantic import Field
@@ -18,4 +19,6 @@ class SimulatorSettings(BaseSettings):
     tick_rate_ms: int = Field(default=500, ge=50, le=10000)
     seed: int = 0
     http_port: int = Field(default=8080, ge=1024, le=65535)
+    inspection_every_n_bottles: int = Field(default=4, ge=1, le=65535)
+    inspection_fail_every_n: int = Field(default=5, ge=1, le=65535)
     log_level: str = "INFO"

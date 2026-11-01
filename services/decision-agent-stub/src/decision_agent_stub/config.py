@@ -29,6 +29,18 @@ class DecisionAgentSettings(BaseSettings):
     target_uns_topic: str = (
         "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature"
     )
+    inspection_enabled: bool = True
+    inspection_topic: str = "uniza/zilina/factory1/line_a/inspector/inspector_01/bottle_inspection"
+    reject_target_uns_topic: str = (
+        "uniza/zilina/factory1/line_a/reject_station/rejector_01/reject_bottle"
+    )
+    rejected_bottle_topic: str = (
+        "uniza/zilina/factory1/line_a/reject_station/rejector_01/last_rejected_bottle"
+    )
+    reject_count_topic: str = (
+        "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count"
+    )
+    inspection_max_age_s: float = Field(default=2.0, gt=0, le=5, allow_inf_nan=False)
     log_level: str = "INFO"
 
     @model_validator(mode="after")

@@ -3,6 +3,8 @@ host: modbus-simulator
 port: 5020
 unit_id: 1
 poll_interval_ms: 500
+# One atomic 10-register inspection snapshot; no split bottle/result pairing.
+inspection_address: 32
 registers:
   # Filler (addresses 0–2)
   - address: 0

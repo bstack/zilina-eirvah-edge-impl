@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import random
+import secrets
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 import structlog
 import uvicorn
 from eirvah_controls import MotorControl, RejectControl, ValveControl
+from eirvah_controls.inspection import InspectionStream
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from pymodbus.datastore import (
@@ -91,6 +94,11 @@ class SimulatorRuntime:
         self._rng = random.Random(settings.seed)
         self._metrics = SimulatorMetrics()
         self._block = RegisterBlock()
+        self._inspection = InspectionStream(
+            session=secrets.randbits(64) or 1,
+            every_n_bottles=settings.inspection_every_n_bottles,
+            fail_every_n_inspections=settings.inspection_fail_every_n,
+        )
         self._context: ModbusServerContext | None = None
         self._ready = False
 
@@ -127,7 +135,10 @@ class SimulatorRuntime:
         while True:
             await asyncio.sleep(interval)
             self._process_controls()
+            previous_bottle = self._block.bottle_count
             self._block.tick(rng=self._rng)
+            if self._block.bottle_count != previous_bottle:
+                self._inspection.observe(self._block.bottle_count, datetime.now(UTC))
             if self._context is not None:
                 self._context[self._settings.unit_id].setValues(_HR, 0, self._block.as_list())
                 self._context[self._settings.unit_id].setValues(
@@ -140,6 +151,14 @@ class SimulatorRuntime:
                         self._block.reject.last_bottle,
                     ],
                 )
+                self._context[self._settings.unit_id].setValues(
+                    _HR, 32, self._inspection.registers()
+                )
+            self._metrics.set_inspection(
+                self._inspection.inspected,
+                self._inspection.failed,
+                self._inspection.registers()[5],
+            )
             self._metrics.set_control_feedback(
                 int(self._block.valve.opened),
                 int(self._block.conveyor.running),

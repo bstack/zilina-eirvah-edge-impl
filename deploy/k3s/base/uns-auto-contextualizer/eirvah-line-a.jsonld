@@ -87,6 +87,8 @@
     {"@id": "eirvah:ControlProperty6", "@type": "sosa:ObservableProperty", "eirvah:unit": "rpm", "eirvah:valueType": "int64", "eirvah:semanticType": "setpoint.rpm"},
     {"@id": "eirvah:ControlFeedback6", "@type": "sosa:Sensor", "sosa:isHostedBy": {"@id": "eirvah:Capper"}, "sosa:observes": {"@id": "eirvah:ControlProperty6"}, "eirvah:nodeId": "Capper.Motor01.SpeedSetpoint", "eirvah:equipment": "motor_01", "eirvah:measurement": "speed_setpoint"},
     {"@id": "eirvah:ControlProperty7", "@type": "sosa:ObservableProperty", "eirvah:unit": "rpm", "eirvah:valueType": "int64", "eirvah:semanticType": "speed.rpm"},
-    {"@id": "eirvah:ControlFeedback7", "@type": "sosa:Sensor", "sosa:isHostedBy": {"@id": "eirvah:Capper"}, "sosa:observes": {"@id": "eirvah:ControlProperty7"}, "eirvah:nodeId": "Capper.Motor01.Rpm", "eirvah:equipment": "motor_01", "eirvah:measurement": "rpm"}
-  ]
+    {"@id": "eirvah:ControlFeedback7", "@type": "sosa:Sensor", "sosa:isHostedBy": {"@id": "eirvah:Capper"}, "sosa:observes": {"@id": "eirvah:ControlProperty7"}, "eirvah:nodeId": "Capper.Motor01.Rpm", "eirvah:equipment": "motor_01", "eirvah:measurement": "rpm"},
+    {"@id":"eirvah:BottleInspectionResult","@type":"sosa:ObservableProperty","eirvah:unit":"json","eirvah:valueType":"string","eirvah:semanticType":"inspection.result.v1"},
+    {"@id":"eirvah:BottleInspectionSensor","@type":"sosa:Sensor","sosa:isHostedBy":{"@id":"eirvah:Inspector"},"sosa:observes":{"@id":"eirvah:BottleInspectionResult"},"eirvah:nodeId":"Inspector01.BottleInspection","eirvah:equipment":"inspector_01","eirvah:measurement":"bottle_inspection"}
+]
 }

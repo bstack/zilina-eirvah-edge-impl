@@ -163,3 +163,5 @@ This repo is Apache-2.0 licensed. Every runtime and build dependency is OSI-appr
 The five-target functional implementation and native OPC UA/Modbus/S7 mappings are described in [Independent controls](docs/experiments/independent-controls.md).
 
 Bottle-conditioning warmer model, assumptions and local checks: [warmer-control.md](docs/experiments/warmer-control.md).
+
+Automatic sampled bottle inspection and rejection: [automatic-inspection.md](docs/experiments/automatic-inspection.md).

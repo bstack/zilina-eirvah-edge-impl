@@ -25,6 +25,10 @@ spec:
               value: "5020"
             - name: MODBUS_SIMULATOR_TICK_RATE_MS
               value: "500"
+            - name: MODBUS_SIMULATOR_INSPECTION_EVERY_N_BOTTLES
+              value: "4"
+            - name: MODBUS_SIMULATOR_INSPECTION_FAIL_EVERY_N
+              value: "5"
           ports:
             - { name: modbus, containerPort: 5020 }
             - { name: http, containerPort: 8080 }

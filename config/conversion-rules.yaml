@@ -59,3 +59,7 @@ rules:
     value_type: int64
     unit: rpm
     drop_bad_quality: false
+  - node_id: Inspector01.BottleInspection
+    value_type: string
+    unit: json
+    drop_bad_quality: true

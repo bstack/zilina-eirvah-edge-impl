@@ -83,4 +83,4 @@ This alternates conveyor speed-setpoint commands between 0.7 and 0.4 m/s. Each c
 
 `harness.py run --experiment a --duration 240` uses this same scenario with metric collection and port-forwards (close conflicting manual forwards first). Its `ok` status still describes action/collection completion, not an automatic thermal-conformance verdict. Its historical results used the earlier threshold controller and are not comparable without qualification. Retain command results and inspect setpoint and temperature separately.
 
-Automatic bottle-specific inspection and rejection remain the next implementation stage; this change does not add them.
+Automatic sampled bottle inspection and rejection are described separately in [automatic inspection](automatic-inspection.md); the warmer scenario remains independent.
