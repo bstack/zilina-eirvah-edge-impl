@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import cast
 
 import structlog
 import uvicorn
@@ -18,6 +19,8 @@ from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter
 from nats.aio.msg import Msg
 from rdflib import Graph
+from rdflib.plugins.sparql import prepareQuery
+from rdflib.query import ResultRow
 from rdflib.term import Literal
 
 from uns_auto_contextualizer.config import AutoContextualizerSettings
@@ -50,6 +53,9 @@ WHERE {
 """
 
 
+_PREPARED_SPARQL = prepareQuery(_SPARQL)
+
+
 def load_ontology(path: Path) -> Graph:
     g = Graph()
     g.parse(str(path), format="json-ld")
@@ -60,10 +66,10 @@ def contextualize(
     normalized: NormalizedSignalEnvelope,
     graph: Graph,
 ) -> ContextualizeResult | None:
-    results = list(graph.query(_SPARQL, initBindings={"nodeId": Literal(normalized.node_id)}))
+    results = list(graph.query(_PREPARED_SPARQL, initBindings={"nodeId": Literal(normalized.node_id)}))
     if not results:
         return None
-    row = results[0]
+    row = cast(ResultRow, results[0])
     path = UNSPath(
         enterprise=str(row.enterprise),
         site=str(row.site),
