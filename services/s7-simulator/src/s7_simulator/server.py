@@ -1,4 +1,5 @@
 """S7 TCP server — Capper (DB1) + Palletizer (DB2) data blocks."""
+
 from __future__ import annotations
 
 import asyncio
@@ -9,6 +10,7 @@ from dataclasses import dataclass, field
 
 import structlog
 import uvicorn
+from eirvah_controls import MotorControl
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from snap7 import server as snap7_server
@@ -19,8 +21,8 @@ from s7_simulator.metrics import SimulatorMetrics
 
 _log = structlog.get_logger("s7-simulator")
 
-DB1_SIZE = 8   # Capper: REAL(4) + INT(2) + INT(2)
-DB2_SIZE = 8   # Palletizer: INT(2) + INT(2) + INT(2) + padding(2)
+DB1_SIZE = 8  # Capper: REAL(4) + INT(2) + INT(2)
+DB2_SIZE = 8  # Palletizer: INT(2) + INT(2) + INT(2) + padding(2)
 
 
 def encode_real(buf: bytearray, offset: int, value: float) -> None:
@@ -37,8 +39,12 @@ class CapperBlock:
     cap_presence: int = 1
     rejects_per_min: int = 0
 
+    motor: MotorControl = field(default_factory=lambda: MotorControl(max_speed=1800, setpoint=1500))
+
     def tick(self, *, rng: random.Random) -> None:
-        self.torque_nm = max(1.5, min(4.0, self.torque_nm + rng.uniform(-0.2, 0.2)))
+        self.torque_nm = (
+            max(1.5, min(4.0, self.torque_nm + rng.uniform(-0.2, 0.2))) if self.motor.speed else 0.0
+        )
         self.cap_presence = 0 if rng.random() < 0.002 else 1
         if rng.random() < 0.01:
             self.rejects_per_min = min(self.rejects_per_min + 1, 10)
@@ -90,10 +96,19 @@ class SimulatorRuntime:
         self._server: snap7_server.Server | None = None
         self._db1 = bytearray(DB1_SIZE)
         self._db2 = bytearray(DB2_SIZE)
+        self._db3 = bytearray(18)
         self._ready = False
 
     def is_ready(self) -> bool:
         return self._ready
+
+    def _process_controls(self) -> None:
+        sequence, operation, value = struct.unpack_from(">HHH", self._db3)
+        previous = struct.unpack_from(">H", self._db3, 6)[0]
+        if sequence and sequence != previous:
+            status = self._capper.motor.apply(operation, value)
+            struct.pack_into(">HH", self._db3, 6, sequence, status)
+            _log.info("device_command", target="capper", operation=operation, outcome=status)
 
     def _sync_buffers(self) -> None:
         with self._lock:
@@ -101,15 +116,32 @@ class SimulatorRuntime:
             db2_bytes = self._palletizer.to_bytes()
         self._db1[:] = db1_bytes
         self._db2[:] = db2_bytes
+        motor = self._capper.motor
+        struct.pack_into(
+            ">HHHH",
+            self._db3,
+            10,
+            int(motor.running),
+            int(motor.faulted),
+            motor.setpoint,
+            motor.speed,
+        )
 
     async def _tick_loop(self) -> None:
         interval = self._settings.tick_rate_ms / 1000.0
         while True:
             await asyncio.sleep(interval)
             with self._lock:
+                self._process_controls()
                 self._capper.tick(rng=self._rng)
                 self._palletizer.tick(rng=self._rng)
             self._sync_buffers()
+            self._metrics.set_control_feedback(
+                int(self._capper.motor.running),
+                int(self._capper.motor.faulted),
+                self._capper.motor.setpoint,
+                self._capper.motor.speed,
+            )
             self._metrics.set_capper(
                 self._capper.torque_nm,
                 self._capper.cap_presence,
@@ -125,6 +157,7 @@ class SimulatorRuntime:
         self._server = snap7_server.Server()
         self._server.register_area(SrvArea.DB, 1, self._db1)
         self._server.register_area(SrvArea.DB, 2, self._db2)
+        self._server.register_area(SrvArea.DB, 3, self._db3)
         self._sync_buffers()
         self._server.start(tcp_port=102)
         self._ready = True

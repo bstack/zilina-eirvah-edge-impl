@@ -8,3 +8,4 @@ configMapGenerator:
     files:
       - opcua-node-to-uns-mapping.yaml
       - opcua-node-list.yaml
+      - native-actuation-targets.yaml

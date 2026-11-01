@@ -1,7 +1,7 @@
 [project]
 name = "eirvah-edge-code"
 version = "0.0.0"
-description = "EirVah Edge Integration Layer — vertical slice"
+description = "EirVah Edge Integration Layer â€” vertical slice"
 requires-python = ">=3.12"
 authors = [{ name = "William Francis Stack" }]
 license = { text = "Apache-2.0" }
@@ -11,6 +11,7 @@ package = false
 # uv 0.4.20 (also pinned in service Dockerfiles) reads this development group.
 dev-dependencies = [
     "eirvah-contracts",
+    "eirvah-controls",
     "eirvah-bus",
     "eirvah-observability",
     "opcua-simulator",
@@ -42,6 +43,7 @@ dev-dependencies = [
 [tool.uv.workspace]
 members = [
     "libs/eirvah-contracts",
+    "libs/eirvah-controls",
     "libs/eirvah-bus",
     "libs/eirvah-observability",
     "services/opcua-simulator",
@@ -62,6 +64,7 @@ members = [
 ]
 
 [tool.uv.sources]
+eirvah-controls = { workspace = true }
 eirvah-contracts                = { workspace = true }
 eirvah-bus                      = { workspace = true }
 eirvah-observability            = { workspace = true }

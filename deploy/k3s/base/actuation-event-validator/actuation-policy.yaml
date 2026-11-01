@@ -4,3 +4,61 @@ policies:
     allowed_range: [20.0, 30.0]
     allowlist:
       - decision-agent-stub
+      - experiment-driver
+
+  - uns_topic: uniza/zilina/factory1/line_a/conveyor/belt_01/run
+    value_type: bool
+    allowed_range:
+    - 0
+    - 1
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint
+    value_type: double
+    allowed_range:
+    - 0
+    - 0.8
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/conveyor/belt_01/reset_fault
+    value_type: bool
+    allowed_range:
+    - 1
+    - 1
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/capper/motor_01/run
+    value_type: bool
+    allowed_range:
+    - 0
+    - 1
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/capper/motor_01/speed_setpoint
+    value_type: int64
+    allowed_range:
+    - 0
+    - 1800
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/capper/motor_01/reset_fault
+    value_type: bool
+    allowed_range:
+    - 1
+    - 1
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/filler/valve_01/open
+    value_type: bool
+    allowed_range:
+    - 0
+    - 1
+    allowlist:
+    - experiment-driver
+  - uns_topic: uniza/zilina/factory1/line_a/reject_station/rejector_01/reject_bottle
+    value_type: int64
+    allowed_range:
+    - 1
+    - 65535
+    allowlist:
+    - experiment-driver

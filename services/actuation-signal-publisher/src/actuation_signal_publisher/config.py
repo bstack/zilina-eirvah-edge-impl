@@ -16,11 +16,10 @@ class SignalPublisherSettings(BaseSettings):
     )
 
     nats_servers: list[str] = ["nats://nats:4222"]
-    mapping_path: Path = Path(
-        "/etc/actuation-signal-publisher/opcua-node-to-uns-mapping.yaml"
-    )
-    node_list_path: Path = Path(
-        "/etc/actuation-signal-publisher/opcua-node-list.yaml"
+    mapping_path: Path = Path("/etc/actuation-signal-publisher/opcua-node-to-uns-mapping.yaml")
+    node_list_path: Path = Path("/etc/actuation-signal-publisher/opcua-node-list.yaml")
+    native_targets_path: Path = Path(
+        "/etc/actuation-signal-publisher/native-actuation-targets.yaml"
     )
     enterprise: str = "uniza"
     site: str = "zilina"

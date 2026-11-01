@@ -39,3 +39,20 @@ registers:
     alias: "RejectStation.ConveyorActive01"
     scale: 1.0
     value_type: int64
+
+  - address: 8
+    alias: Filler.Valve01.Open
+    scale: 1.0
+    value_type: int64
+  - address: 9
+    alias: Conveyor.Belt01.Running
+    scale: 1.0
+    value_type: int64
+  - address: 10
+    alias: Conveyor.Belt01.SpeedSetpoint
+    scale: 100.0
+    value_type: double
+  - address: 11
+    alias: RejectStation.LastRejectedBottle
+    scale: 1.0
+    value_type: int64

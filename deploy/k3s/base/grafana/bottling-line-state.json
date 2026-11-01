@@ -775,6 +775,283 @@
           "refId": "A"
         }
       ]
+    },
+    {
+      "id": 74,
+      "type": "row",
+      "title": "Controlled actuators",
+      "collapsed": false,
+      "panels": [],
+      "gridPos": {
+        "x": 0,
+        "y": 71,
+        "w": 24,
+        "h": 1
+      }
+    },
+    {
+      "id": 75,
+      "type": "stat",
+      "title": "Conveyor running (0/1)",
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_conveyor_running",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 76,
+      "type": "stat",
+      "title": "Conveyor speed setpoint",
+      "gridPos": {
+        "x": 6,
+        "y": 72,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_conveyor_speed_setpoint_meters_per_second",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocityms",
+          "decimals": 2,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 77,
+      "type": "stat",
+      "title": "Filler valve open (0/1)",
+      "gridPos": {
+        "x": 12,
+        "y": 72,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_valve_open",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 78,
+      "type": "stat",
+      "title": "Last rejected bottle ID",
+      "gridPos": {
+        "x": 18,
+        "y": 72,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_modbus_simulator_last_rejected_bottle_id",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 79,
+      "type": "stat",
+      "title": "Capper running (0/1)",
+      "gridPos": {
+        "x": 0,
+        "y": 77,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_motor_running",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 80,
+      "type": "stat",
+      "title": "Capper faulted (0/1)",
+      "gridPos": {
+        "x": 6,
+        "y": 77,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_motor_faulted",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 81,
+      "type": "stat",
+      "title": "Capper speed setpoint",
+      "gridPos": {
+        "x": 12,
+        "y": 77,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_motor_speed_setpoint_rpm",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rotrpm",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
+    },
+    {
+      "id": 82,
+      "type": "stat",
+      "title": "Capper actual speed",
+      "gridPos": {
+        "x": 18,
+        "y": 77,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "expr": "eirvah_s7_simulator_motor_rpm",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "rotrpm",
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "blue",
+                "value": null
+              }
+            ]
+          },
+          "mappings": []
+        }
+      }
     }
   ]
 }

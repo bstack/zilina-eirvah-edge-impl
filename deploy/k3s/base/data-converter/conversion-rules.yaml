@@ -112,3 +112,36 @@ rules:
     value_type: int64
     unit: dimensionless
     drop_bad_quality: false
+
+  - node_id: Filler.Valve01.Open
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+  - node_id: Conveyor.Belt01.Running
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+  - node_id: Conveyor.Belt01.SpeedSetpoint
+    value_type: double
+    unit: m/s
+    drop_bad_quality: false
+  - node_id: RejectStation.LastRejectedBottle
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+  - node_id: Capper.Motor01.Running
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+  - node_id: Capper.Motor01.Faulted
+    value_type: int64
+    unit: dimensionless
+    drop_bad_quality: false
+  - node_id: Capper.Motor01.SpeedSetpoint
+    value_type: int64
+    unit: rpm
+    drop_bad_quality: false
+  - node_id: Capper.Motor01.Rpm
+    value_type: int64
+    unit: rpm
+    drop_bad_quality: false

@@ -35,3 +35,23 @@ data_blocks:
         type: int
         alias: "Palletizer.CycleCounter01"
         value_type: int64
+
+  - db: 3
+    size: 18
+    signals:
+    - offset: 10
+      type: int
+      alias: Capper.Motor01.Running
+      value_type: int64
+    - offset: 12
+      type: int
+      alias: Capper.Motor01.Faulted
+      value_type: int64
+    - offset: 14
+      type: int
+      alias: Capper.Motor01.SpeedSetpoint
+      value_type: int64
+    - offset: 16
+      type: int
+      alias: Capper.Motor01.Rpm
+      value_type: int64

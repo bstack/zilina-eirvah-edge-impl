@@ -67,6 +67,8 @@ flowchart LR
     ACT_ORCH -- act.work.validate --> VALID --> ACT_ORCH
     ACT_ORCH -- act.work.write_signal --> SIG_PUB --> ACT_ORCH
     SIG_PUB -- OPC UA write --> OPCUA_SIM
+    SIG_PUB -- Modbus write --> MODBUS_SIM
+    SIG_PUB -- S7 write --> S7_SIM
 ```
 
 Prometheus scrapes `/metrics` from every pod (including the three brokers); Grafana ships two pre-provisioned dashboards ("EirVah Edge Pipeline" and "Bottling Line State"). Full component contracts, NATS subject list, and the UNS topic/payload schemas live in the design spec below.
@@ -94,7 +96,7 @@ Prometheus scrapes `/metrics` from every pod (including the three brokers); Graf
 - **`amqp-actuation-event-subscriber`** — Consumes the `eirvah.actuation.requests` queue on RabbitMQ and re-emits each request as a NATS envelope on `act.ingress.requested`, acking the AMQP delivery only after the NATS publish succeeds (at-least-once into the edge).
 - **`actuation-control-orchestrator`** — Owns the actuation pipeline. Drives `act.work.validate`; on approval, drives `act.work.write_signal`; on rejection, dead-letters to `act.dlq.rejected` and stops. Gated by an `allow_writes` feature flag (default `false`) so writes to the device are opt-in.
 - **`actuation-event-validator`** — Worker on `act.work.validate`. Checks that the target UNS topic resolves to a writable node, the requested value is within the configured policy range, and the requester is allow-listed (`config/actuation-policy.yaml`). Returns `approve` or `reject` with a reason.
-- **`actuation-signal-publisher`** — Worker on `act.work.write_signal`. Resolves the UNS topic back to its OPC UA node ID (the reverse of the contextualizer's mapping) and performs the write against the OPC UA simulator, closing the loop.
+- **`actuation-signal-publisher`** — Worker on `act.work.write_signal`. Resolves temperature targets to OPC UA nodes and the additional controls to configured Modbus/S7 mailboxes. Native writes require matching simulator acknowledgements; see the independent-controls guide.
 
 ### Loop-closer and infrastructure
 
@@ -155,3 +157,7 @@ uv sync --frozen              # install the locked workspace + development/exper
 ## Licensing
 
 This repo is Apache-2.0 licensed. Every runtime and build dependency is OSI-approved open source.
+
+## Independent actuator controls
+
+The five-target functional implementation and native OPC UA/Modbus/S7 mappings are described in [Independent controls](docs/experiments/independent-controls.md).

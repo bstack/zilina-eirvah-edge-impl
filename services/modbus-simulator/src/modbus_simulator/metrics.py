@@ -1,4 +1,5 @@
 """Prometheus metrics for the Modbus multi-station simulator."""
+
 from __future__ import annotations
 
 from eirvah_observability.metrics import make_gauge
@@ -9,36 +10,80 @@ class SimulatorMetrics:
     def __init__(self, registry: CollectorRegistry = REGISTRY) -> None:
         self._fill_level = make_gauge(
             "modbus_simulator_fill_level_percent",
-            "Filler fill level (%).", labelnames=[], registry=registry,
+            "Filler fill level (%).",
+            labelnames=[],
+            registry=registry,
         )
         self._motor_state = make_gauge(
             "modbus_simulator_motor_state",
-            "Filler motor state: 0=stopped 1=running.", labelnames=[], registry=registry,
+            "Filler motor state: 0=stopped 1=running.",
+            labelnames=[],
+            registry=registry,
         )
         self._throughput = make_gauge(
             "modbus_simulator_throughput_bottles_per_second",
-            "Filler throughput (bottles/s).", labelnames=[], registry=registry,
+            "Filler throughput (bottles/s).",
+            labelnames=[],
+            registry=registry,
         )
         self._belt_speed = make_gauge(
             "modbus_simulator_belt_speed_meters_per_second",
-            "Conveyor belt speed (m/s).", labelnames=[], registry=registry,
+            "Conveyor belt speed (m/s).",
+            labelnames=[],
+            registry=registry,
         )
         self._jam_detected = make_gauge(
             "modbus_simulator_jam_detected",
-            "Conveyor jam detected: 0=clear 1=jammed.", labelnames=[], registry=registry,
+            "Conveyor jam detected: 0=clear 1=jammed.",
+            labelnames=[],
+            registry=registry,
         )
         self._bottle_count = make_gauge(
             "modbus_simulator_bottle_count_total",
-            "Conveyor cumulative bottle count.", labelnames=[], registry=registry,
+            "Conveyor cumulative bottle count.",
+            labelnames=[],
+            registry=registry,
         )
         self._reject_count = make_gauge(
             "modbus_simulator_reject_count_total",
-            "Reject station cumulative reject count.", labelnames=[], registry=registry,
+            "Reject station cumulative reject count.",
+            labelnames=[],
+            registry=registry,
         )
         self._conveyor_active = make_gauge(
             "modbus_simulator_conveyor_active",
-            "Reject station conveyor active: 0=stopped 1=running.", labelnames=[], registry=registry,
+            "Reject station conveyor active: 0=stopped 1=running.",
+            labelnames=[],
+            registry=registry,
         )
+
+        self._control_valve_open = make_gauge(
+            "modbus_simulator_valve_open", "Valve open: 0/1", labelnames=[], registry=registry
+        )
+        self._control_conveyor_running = make_gauge(
+            "modbus_simulator_conveyor_running",
+            "Conveyor commanded running: 0/1",
+            labelnames=[],
+            registry=registry,
+        )
+        self._control_conveyor_speed_setpoint_meters_per_second = make_gauge(
+            "modbus_simulator_conveyor_speed_setpoint_meters_per_second",
+            "Conveyor speed setpoint (m/s)",
+            labelnames=[],
+            registry=registry,
+        )
+        self._control_last_rejected_bottle_id = make_gauge(
+            "modbus_simulator_last_rejected_bottle_id",
+            "Last successfully rejected simulated bottle ID",
+            labelnames=[],
+            registry=registry,
+        )
+
+    def set_control_feedback(self, a: float, b: float, c: float, d: float) -> None:
+        self._control_valve_open.set(a)
+        self._control_conveyor_running.set(b)
+        self._control_conveyor_speed_setpoint_meters_per_second.set(c)
+        self._control_last_rejected_bottle_id.set(d)
 
     def set_fill_level(self, value: float) -> None:
         self._fill_level.set(value)

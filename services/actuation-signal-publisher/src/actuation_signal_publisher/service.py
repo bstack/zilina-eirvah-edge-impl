@@ -22,6 +22,7 @@ from nats.aio.msg import Msg
 from pydantic import BaseModel
 
 from actuation_signal_publisher.config import SignalPublisherSettings
+from actuation_signal_publisher.native import NativeTarget, load_native_targets, write_native_value
 
 _log = structlog.get_logger("actuation-signal-publisher")
 SUBJECT = "act.work.write_signal"
@@ -70,9 +71,7 @@ def load_write_targets(
             f"/{entry['cell']}/{entry['equipment']}/{entry['measurement']}"
         )
         if topic in targets:
-            raise ValueError(
-                f"mapping not bijective: topic {topic!r} maps to multiple node_ids"
-            )
+            raise ValueError(f"mapping not bijective: topic {topic!r} maps to multiple node_ids")
         browse_names = alias_to_browse.get(alias)
         if browse_names is None:
             continue  # node not in node-list — not writable via this service
@@ -101,6 +100,7 @@ class SignalPublisherWorker:
     def __init__(self, settings: SignalPublisherSettings) -> None:
         self._settings = settings
         self._targets: dict[str, WriteTarget] = {}
+        self._native_targets: dict[str, NativeTarget] = {}
         self._ready = False
         self._handled = make_counter(
             "worker_handler_total",
@@ -118,6 +118,7 @@ class SignalPublisherWorker:
             enterprise=self._settings.enterprise,
             site=self._settings.site,
         )
+        self._native_targets = load_native_targets(self._settings.native_targets_path)
         bus = BusClient(servers=self._settings.nats_servers, name="actuation-signal-publisher")
         await bus.connect()
         await subscribe_queue_group(nc=bus.nc, subject=SUBJECT, handler=self._handle)
@@ -132,11 +133,14 @@ class SignalPublisherWorker:
             correlation_id = envelope.correlation_id
             req = ActuationRequest.model_validate(envelope.payload)
 
-            target = self._targets.get(req.target_uns_topic)
-            if target is None:
-                raise ValueError(f"no write target for topic {req.target_uns_topic!r}")
-
-            await write_opcua_value(target=target, value=req.requested_value)
+            native = self._native_targets.get(req.target_uns_topic)
+            if native is not None:
+                await write_native_value(native, req.requested_value)
+            else:
+                target = self._targets.get(req.target_uns_topic)
+                if target is None:
+                    raise ValueError(f"no write target for topic {req.target_uns_topic!r}")
+                await write_opcua_value(target=target, value=req.requested_value)
 
             self._handled.labels(worker="actuation-signal-publisher", outcome="ok").inc()
             reply = NATSEnvelope(correlation_id=correlation_id)

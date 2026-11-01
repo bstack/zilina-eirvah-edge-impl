@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 from pathlib import Path
 
 import structlog
@@ -12,6 +13,7 @@ from eirvah_bus.client import BusClient
 from eirvah_bus.consumer import subscribe_queue_group
 from eirvah_contracts.actuation import ActuationRequest, ValidationResult
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
+from eirvah_contracts.signals import SignalValueType
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter
@@ -28,6 +30,7 @@ class NodePolicy(BaseModel):
     uns_topic: str
     allowed_range: tuple[float, float]
     allowlist: list[str]
+    value_type: SignalValueType = "double"
 
 
 class PolicyConfig(BaseModel):
@@ -57,8 +60,17 @@ def validate_request(
             reason=f"requester {req.requester!r} not in allowlist",
             reason_code="not_allowlisted",
         )
+    value_type_ok = req.value_type == policy.value_type and (
+        (policy.value_type == "bool" and type(req.requested_value) is bool)
+        or (policy.value_type == "int64" and type(req.requested_value) is int)
+        or (policy.value_type == "double" and type(req.requested_value) in (int, float))
+    )
+    if not value_type_ok:
+        return ValidationResult(
+            decision="reject", reason="requested_value has wrong type", reason_code="not_numeric"
+        )
     try:
-        value = float(req.requested_value)  # type: ignore[arg-type]
+        value = float(req.requested_value)
     except (TypeError, ValueError):
         return ValidationResult(
             decision="reject",
@@ -66,7 +78,7 @@ def validate_request(
             reason_code="not_numeric",
         )
     lo, hi = policy.allowed_range
-    if not (lo <= value <= hi):
+    if not math.isfinite(value) or not (lo <= value <= hi):
         return ValidationResult(
             decision="reject",
             reason=f"value {value} outside policy range [{lo}, {hi}]",

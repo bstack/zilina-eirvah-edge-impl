@@ -1,13 +1,15 @@
 """Modbus TCP server + tick loop."""
+
 from __future__ import annotations
 
 import asyncio
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import ROUND_HALF_UP, Decimal
 
 import structlog
 import uvicorn
+from eirvah_controls import MotorControl, RejectControl, ValveControl
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from pymodbus.datastore import (
@@ -35,33 +37,52 @@ def register_to_scale(raw: int, *, scale: int) -> float:
 
 @dataclass
 class RegisterBlock:
-    # Filler (addresses 0–2)
-    fill_level_raw: int = 750    # 75.0% (scale ×10)
-    motor_state: int = 1          # running
-    throughput_raw: int = 80      # 0.80 bottles/s (scale ×100)
-    # Conveyor (addresses 3–5)
-    belt_speed_raw: int = 50      # 0.50 m/s (scale ×100)
+    # Filler (addresses 0-2)
+    fill_level_raw: int = 750  # 75.0% (scale x10)
+    motor_state: int = 1  # running
+    throughput_raw: int = 80  # 0.80 bottles/s (scale x100)
+    # Conveyor (addresses 3-5)
+    belt_speed_raw: int = 50  # 0.50 m/s (scale x100)
     jam_detected: int = 0
-    bottle_count: int = 0         # cumulative, wraps at 65535
-    # Reject Station (addresses 6–7)
-    reject_count: int = 0         # cumulative, rarely increments
+    bottle_count: int = 0  # synthetic IDs cycle through 1-65535
+    # Reject Station (addresses 6-7)
+    reject_count: int = 0  # cumulative accepted bottle-rejection commands
     conveyor_active: int = 1
+
+    conveyor: MotorControl = field(init=False)
+    valve: ValveControl = field(default_factory=ValveControl)
+    reject: RejectControl = field(default_factory=RejectControl)
+
+    def __post_init__(self) -> None:
+        self.conveyor = MotorControl(max_speed=80, setpoint=self.belt_speed_raw)
+        self.reject.count = self.reject_count
 
     def as_list(self) -> list[int]:
         return [
-            self.fill_level_raw, self.motor_state, self.throughput_raw,
-            self.belt_speed_raw, self.jam_detected, self.bottle_count,
-            self.reject_count, self.conveyor_active,
+            self.fill_level_raw,
+            self.motor_state,
+            self.throughput_raw,
+            self.belt_speed_raw,
+            self.jam_detected,
+            self.bottle_count,
+            self.reject_count,
+            self.conveyor_active,
         ]
 
     def tick(self, *, rng: random.Random, delta_max: int = 20) -> None:
         span = abs(delta_max)
-        self.fill_level_raw = max(500, min(950, self.fill_level_raw + rng.randint(-span, span)))
-        self.belt_speed_raw = max(20, min(80, self.belt_speed_raw + rng.randint(-5, 5)))
-        self.bottle_count = (self.bottle_count + 1) % 65536
-        self.jam_detected = 1 if rng.random() < 0.001 else 0
-        if rng.random() < 0.01:
-            self.reject_count = min(self.reject_count + 1, 65535)
+        if self.valve.opened:
+            self.fill_level_raw = max(500, min(950, self.fill_level_raw + rng.randint(-span, span)))
+        self.throughput_raw = 80 if self.valve.opened else 0
+        if rng.random() < 0.001:
+            self.conveyor.apply(4, 1)
+        self.belt_speed_raw = self.conveyor.speed
+        self.jam_detected = int(self.conveyor.faulted)
+        self.conveyor_active = int(self.belt_speed_raw > 0)
+        if self.belt_speed_raw:
+            self.bottle_count = self.bottle_count % 65535 + 1
+            self.reject.observe(self.bottle_count)
+        self.reject_count = self.reject.count
 
 
 class SimulatorRuntime:
@@ -77,20 +98,54 @@ class SimulatorRuntime:
         return self._ready
 
     def _build_context(self) -> ModbusServerContext:
-        store = ModbusSlaveContext(
-            hr=ModbusSequentialDataBlock(0, self._block.as_list() + [0] * 2),
+        store = ModbusSlaveContext(  # type: ignore[no-untyped-call]
+            hr=ModbusSequentialDataBlock(0, [0] * 80),  # type: ignore[no-untyped-call]
         )
-        return ModbusServerContext(slaves={self._settings.unit_id: store}, single=False)
+        context = ModbusServerContext(  # type: ignore[no-untyped-call]
+            slaves={self._settings.unit_id: store}, single=False
+        )
+        context[self._settings.unit_id].setValues(_HR, 0, self._block.as_list())
+        return context
+
+    def _process_controls(self) -> None:
+        assert self._context is not None
+        store = self._context[self._settings.unit_id]
+        for address, ack, control in (
+            (20, 50, self._block.conveyor),
+            (24, 52, self._block.valve),
+            (28, 54, self._block.reject),
+        ):
+            sequence, operation, value = store.getValues(_HR, address, 3)
+            previous = store.getValues(_HR, ack, 2)[0]
+            if sequence and sequence != previous:
+                status = control.apply(operation, value)
+                store.setValues(_HR, ack, [sequence, status])
+                _log.info("device_command", target=address, operation=operation, outcome=status)
 
     async def _tick_loop(self) -> None:
         interval = self._settings.tick_rate_ms / 1000.0
         while True:
             await asyncio.sleep(interval)
+            self._process_controls()
             self._block.tick(rng=self._rng)
             if self._context is not None:
+                self._context[self._settings.unit_id].setValues(_HR, 0, self._block.as_list())
                 self._context[self._settings.unit_id].setValues(
-                    _HR, 0, self._block.as_list()
+                    _HR,
+                    8,
+                    [
+                        int(self._block.valve.opened),
+                        int(self._block.conveyor.running),
+                        self._block.conveyor.setpoint,
+                        self._block.reject.last_bottle,
+                    ],
                 )
+            self._metrics.set_control_feedback(
+                int(self._block.valve.opened),
+                int(self._block.conveyor.running),
+                self._block.conveyor.setpoint / 100,
+                self._block.reject.last_bottle,
+            )
             self._metrics.set_fill_level(register_to_scale(self._block.fill_level_raw, scale=10))
             self._metrics.set_motor_state(self._block.motor_state)
             self._metrics.set_throughput(register_to_scale(self._block.throughput_raw, scale=100))
@@ -110,7 +165,7 @@ class SimulatorRuntime:
             unit_id=self._settings.unit_id,
         )
         await asyncio.gather(
-            StartAsyncTcpServer(
+            StartAsyncTcpServer(  # type: ignore[no-untyped-call]
                 context=self._context,
                 address=(self._settings.host, self._settings.port),
             ),

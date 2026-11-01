@@ -1,10 +1,12 @@
 [project]
 name = "actuation-signal-publisher"
 version = "0.0.0"
-description = "Resolves UNS topic to OPC UA node and writes value (spec §3.2)."
+description = "Resolves UNS topic to OPC UA node and writes value (spec Â§3.2)."
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 dependencies = [
+    "pymodbus>=3.6,<3.8",
+    "python-snap7>=1.3",
     "asyncua>=1.0",
     "nats-py>=2.7",
     "pydantic>=2.8",

@@ -1,10 +1,11 @@
 [project]
 name = "modbus-simulator"
 version = "0.0.0"
-description = "Modbus TCP simulator — second-slice protocol target."
+description = "Modbus TCP simulator â€” second-slice protocol target."
 requires-python = ">=3.12"
 license = { text = "Apache-2.0" }
 dependencies = [
+    "eirvah-controls",
     "pymodbus>=3.6,<3.8",
     "pydantic>=2.8",
     "pydantic-settings>=2.5",
