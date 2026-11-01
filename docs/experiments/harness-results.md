@@ -61,3 +61,9 @@ Prometheus summaries include the baseline, workload and recovery samples. Their 
 HPA metrics are optional in scenario C unless `--expect-hpa` is supplied. Missing optional metrics remain visible. Available deployment replicas are queried independently. Stage-timeout metrics in scenario B are optional because the application creates some labelled series only after the first event. Missing required metrics, including at startup, make evidence incomplete; an empty query is never silently converted to zero.
 
 The existing load generator bounds concurrent requests (`--max-pending`, default 1000), so achieved load can be below target under backpressure. Its `--timeout` defaults to 5 seconds; an unanswered request remains unknown, not proven lost. These values are retained in the run configuration.
+
+## Current scenario A
+
+Scenario A now runs the bottle-warmer production-mode demo: validated conveyor speed-setpoint commands alternate between 0.7 and 0.4 m/s, with a separate OPC UA cooling injection. The decision service selects the warmer recipe from UNS observations. The harness also forwards RabbitMQ (`--amqp-port`, default 5672). Close conflicting manual port-forwards first. The old direct temperature-setpoint override and 26-degree threshold no longer apply. See [warmer control](warmer-control.md).
+
+An `ok` harness outcome still reports process/metric collection status only: it does not assert that every speed transition caused the expected warmer command or thermal response. Inspect command results, setpoint and measured temperature separately. Historical A results used a different controller and are not directly comparable.

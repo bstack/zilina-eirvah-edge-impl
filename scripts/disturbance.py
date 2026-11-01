@@ -1,83 +1,74 @@
-"""
-Injects periodic setpoint disturbances into the OPC UA simulator.
+"""Alternate conveyor production modes and inject a separate warmer cooling load.
 
-Simulates a process disturbance (heat load change, upstream override, etc.)
-that pushes temperature above the decision-agent-stub threshold, triggering
-the CPS actuation loop autonomously.
-
-Timing (default config, alpha=0.05, tick=500ms):
-  ~7s   — temperature crosses 26°C threshold after disturbance
-  ~37s  — decision-agent-stub fires (30s sustained breach)
-  ~60s  — actuation cooldown expires
-  120s  — next disturbance (default interval)
-
-Usage:
-  uv run python scripts/disturbance.py
-  uv run python scripts/disturbance.py --disturbance 30.0 --interval 120 --endpoint opc.tcp://localhost:4840/eirvah/simulator
+This supersedes the old direct temperature-setpoint override demo. Conveyor
+commands use normal AMQP validation/writing; the supervisor selects the warmer
+recipe from UNS speed-setpoint observations. Stop with Ctrl+C. The final mode
+remains selected; this tool does not silently restore or retry uncertain commands.
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
-import sys
+import math
 from datetime import UTC, datetime
 
+from asyncua import Client
+from control import build_command, send
 
-async def run(
-    *,
-    endpoint: str,
-    disturbance_value: float,
-    interval_s: float,
-    namespace_uri: str,
-) -> None:
-    from asyncua import Client
 
-    print(f"connecting to {endpoint}", flush=True)
+async def apply_cycle(client: Client, *, speed: float, amqp_url: str, namespace_uri: str) -> None:
+    command = build_command("conveyor", "speed", speed)
+    result = await send(command, amqp_url)
+    if result.get("decision") != "approve" or not result.get("written_at"):
+        raise RuntimeError(f"conveyor speed write not confirmed: {result}")
+    ns = await client.get_namespace_index(namespace_uri)
+    bottler = await client.nodes.objects.get_child([f"{ns}:bottler"])
+    await bottler.call_method(f"{ns}:TriggerCoolingLoad")
+    print(
+        f"{datetime.now(UTC).isoformat()} conveyor speed setpoint={speed} m/s; "
+        "cooling injected without changing the warmer setpoint. "
+        "Check the separate supervisory command and subsequent temperature response.",
+        flush=True,
+    )
 
+
+async def run(*, endpoint: str, interval_s: float, namespace_uri: str, amqp_url: str) -> None:
     async with Client(url=endpoint) as client:
-        ns_idx = await client.get_namespace_index(namespace_uri)
-        node = await client.nodes.objects.get_child(
-            [f"{ns_idx}:bottler", f"{ns_idx}:SetpointTemperature"]
-        )
-
-        cycle = 0
+        high = True
         while True:
-            cycle += 1
-            current = float(await node.read_value())
-            await node.write_value(disturbance_value)
-            ts = datetime.now(UTC).isoformat(timespec="seconds")
-            print(
-                f"[{ts}] cycle={cycle}  disturbance written: {current:.2f}°C → {disturbance_value:.2f}°C",
-                flush=True,
+            await apply_cycle(
+                client,
+                speed=0.7 if high else 0.4,
+                amqp_url=amqp_url,
+                namespace_uri=namespace_uri,
             )
-            print(
-                f"[{ts}]   decision-agent fires in ~37s  |  next disturbance in {interval_s:.0f}s",
-                flush=True,
-            )
+            high = not high
             await asyncio.sleep(interval_s)
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="OPC UA setpoint disturbance injector")
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--endpoint", default="opc.tcp://localhost:4840/eirvah/simulator")
     parser.add_argument("--namespace", default="https://eirvah.uniza/zilina/factory1")
-    parser.add_argument("--disturbance", type=float, default=30.0, help="setpoint to inject (°C)")
-    parser.add_argument("--interval", type=float, default=120.0, help="seconds between disturbances")
+    parser.add_argument("--amqp-url", default="amqp://eirvah:eirvah-dev-password@localhost:5672/")
+    parser.add_argument("--interval", type=float, default=120.0)
     args = parser.parse_args()
-
+    if not math.isfinite(args.interval) or args.interval <= 0:
+        parser.error("interval must be positive and finite")
     try:
         asyncio.run(
             run(
                 endpoint=args.endpoint,
-                disturbance_value=args.disturbance,
                 interval_s=args.interval,
                 namespace_uri=args.namespace,
+                amqp_url=args.amqp_url,
             )
         )
+    except TimeoutError:
+        parser.exit(2, "Outcome UNKNOWN: inspect the command before retrying.\n")
     except KeyboardInterrupt:
-        print("\nstopped", flush=True)
-        sys.exit(0)
+        print("Stopped; the final production mode remains selected.")
 
 
 if __name__ == "__main__":

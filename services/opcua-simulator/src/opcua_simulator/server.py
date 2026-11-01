@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC, datetime
+from time import monotonic
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -19,10 +20,10 @@ from opcua_simulator.hot_spike import HotSpike
 from opcua_simulator.metrics import SimulatorMetrics
 from opcua_simulator.motor import Motor
 from opcua_simulator.quality import QualityEmitter
+from opcua_simulator.quality_rate import QualityRateDynamics
 from opcua_simulator.rng import SimulatorRNG
 from opcua_simulator.setpoint import Setpoint
 from opcua_simulator.temperature import TemperatureDynamics
-from opcua_simulator.quality_rate import QualityRateDynamics
 from opcua_simulator.throughput import Throughput
 
 if TYPE_CHECKING:
@@ -39,9 +40,7 @@ _VALUE_TYPE_TO_VARIANT = {
 
 
 class SimulatorRuntime:
-    def __init__(
-        self, settings: SimulatorSettings, registry: CollectorRegistry = REGISTRY
-    ) -> None:
+    def __init__(self, settings: SimulatorSettings, registry: CollectorRegistry = REGISTRY) -> None:
         self.settings = settings
         self.rng = SimulatorRNG(seed=settings.seed)
         self.metrics = SimulatorMetrics(registry=registry)
@@ -57,6 +56,7 @@ class SimulatorRuntime:
         self._nodes_by_def_id: dict[str, Node] = {}
         self._server: Server | None = None
         self._ready: bool = False
+        self._last_tick_at: float | None = None
 
     def is_ready(self) -> bool:
         return self._ready
@@ -103,8 +103,8 @@ class SimulatorRuntime:
             raise ValueError("address space must contain a temperature node")
         self._temperature = TemperatureDynamics(
             initial=float(temp_def.initial),
-            alpha=0.05,
-            sigma=0.3,
+            time_constant_s=self.settings.temperature_time_constant_s,
+            sigma=self.settings.temperature_noise,
             rng=self.rng,
         )
         self._motor = Motor(
@@ -148,11 +148,24 @@ class SimulatorRuntime:
             await eq_folder.add_method(
                 ns_idx, "TriggerHotSpike", self._trigger_hot_spike_method, [], []
             )
+            if any(n.dynamics == "temperature" for n in eq.nodes):
+                await eq_folder.add_method(
+                    ns_idx, "TriggerCoolingLoad", self._trigger_cooling_load_method, [], []
+                )
 
     async def _trigger_hot_spike_method(self, _parent: Any) -> list[Any]:
         assert self._hot_spike is not None
         self._hot_spike.trigger_via_method()
         _log.info("hot_spike_method_invoked")
+        return []
+
+    async def _trigger_cooling_load_method(self, _parent: Any) -> list[Any]:
+        assert self._temperature is not None
+        self._temperature.inject_cooling(
+            rate_celsius_per_s=self.settings.cooling_rate_celsius_per_s,
+            duration_s=self.settings.cooling_duration_s,
+        )
+        _log.info("cooling_load_injected", duration_s=self.settings.cooling_duration_s)
         return []
 
     async def run_tick_loop(self) -> None:
@@ -174,10 +187,17 @@ class SimulatorRuntime:
         prev_spike_counts = dict(self._hot_spike.trigger_counts())
         spike = self._hot_spike.tick()
         self._motor.tick()
-        temp = self._temperature.tick(setpoint=self._setpoint.value, spike_contribution=spike)
-        tput = self._throughput.compute(
-            motor_state=self._motor.state, motor_rpm=self._motor.rpm
+        now = monotonic()
+        elapsed_s = (
+            now - self._last_tick_at
+            if self._last_tick_at is not None
+            else self.settings.tick_rate_ms / 1000.0
         )
+        self._last_tick_at = now
+        temp = self._temperature.tick(
+            setpoint=self._setpoint.value, elapsed_s=elapsed_s, spike_contribution=spike
+        )
+        tput = self._throughput.compute(motor_state=self._motor.state, motor_rpm=self._motor.rpm)
 
         for node_id, dyn in self._quality_rate_nodes.items():
             self._quality_rate_current[node_id] = dyn.tick()

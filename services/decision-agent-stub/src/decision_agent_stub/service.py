@@ -1,9 +1,9 @@
-"""Decision agent stub — closes the CPS loop (spec §3.3)."""
+"""Select a warmer recipe from observed conveyor speed-setpoint changes."""
 
 from __future__ import annotations
 
-import asyncio
 import json
+import math
 from datetime import UTC, datetime, timedelta
 
 import aio_pika
@@ -19,61 +19,45 @@ from decision_agent_stub.config import DecisionAgentSettings
 _log = structlog.get_logger("decision-agent-stub")
 
 
-class TriggerWindow:
-    """Tracks sustained threshold breach and fires actuation request when triggered."""
+class ProductionModeRule:
+    """One request per observed mode transition; no automatic retries of unknown work."""
 
-    def __init__(
-        self,
-        *,
-        threshold: float,
-        duration_s: float,
-        cooldown_s: float = 60.0,
-        setpoint_target: float = 22.0,
-        target_uns_topic: str = (
-            "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature"
-        ),
-    ) -> None:
-        self._threshold = threshold
-        self._duration_s = duration_s
-        self._cooldown_s = cooldown_s
-        self._setpoint_target = setpoint_target
-        self._target_uns_topic = target_uns_topic
-        self._breach_start: datetime | None = None
-        self._last_fired: datetime | None = None
+    def __init__(self, settings: DecisionAgentSettings) -> None:
+        self.settings = settings
+        self._last_mode: str | None = None
+        self._latest_at: datetime | None = None
 
     def update(
-        self,
-        *,
-        value: float,
-        ts: datetime,
-        correlation_id: str,
+        self, *, speed: float, observed_at: datetime, now: datetime, quality: str = "good"
     ) -> ActuationRequest | None:
-        if value <= self._threshold:
-            self._breach_start = None
+        if not self.settings.enabled or quality != "good":
             return None
-
-        if self._breach_start is None:
-            self._breach_start = ts
+        if type(speed) not in (int, float) or not math.isfinite(speed) or not 0 <= speed <= 0.8:
             return None
-
-        if (ts - self._breach_start).total_seconds() < self._duration_s:
+        if observed_at.tzinfo is None or now.tzinfo is None:
             return None
-
-        # Breach sustained — check cooldown
-        if self._last_fired is not None:
-            if (ts - self._last_fired).total_seconds() < self._cooldown_s:
-                return None
-
-        self._last_fired = ts
-        self._breach_start = None  # reset for next cycle
-        now = datetime.now(UTC)
+        age = (now - observed_at).total_seconds()
+        if not 0 <= age <= self.settings.max_observation_age_s:
+            return None
+        if self._latest_at is not None and observed_at < self._latest_at:
+            return None
+        self._latest_at = observed_at
+        if speed >= self.settings.high_speed_min:
+            mode, target = "high", self.settings.high_setpoint
+        elif speed <= self.settings.normal_speed_max:
+            mode, target = "normal", self.settings.normal_setpoint
+        else:
+            return None  # Hysteresis: preserve the selected mode between the bands.
+        if mode == self._last_mode:
+            return None
+        self._last_mode = mode
         return ActuationRequest(
-            correlation_id=correlation_id,
+            correlation_id=generate_correlation_id(),
             requester="decision-agent-stub",
-            target_uns_topic=self._target_uns_topic,
-            requested_value=self._setpoint_target,
+            target_uns_topic=self.settings.target_uns_topic,
+            requested_value=target,
             value_type="double",
-            reason=f"telemetry threshold breach: temperature > {self._threshold} for {self._duration_s}s",
+            reason=f"warmer recipe: {mode} production mode, conveyor speed setpoint {speed} m/s",
             requested_at=now,
             deadline=now + timedelta(seconds=10),
         )
@@ -82,13 +66,7 @@ class TriggerWindow:
 class DecisionAgentRuntime:
     def __init__(self, settings: DecisionAgentSettings) -> None:
         self._settings = settings
-        self._window = TriggerWindow(
-            threshold=settings.threshold,
-            duration_s=settings.trigger_duration_s,
-            cooldown_s=settings.cooldown_s,
-            setpoint_target=settings.setpoint_target,
-            target_uns_topic=settings.target_uns_topic,
-        )
+        self._rule = ProductionModeRule(settings)
         self._fired = make_counter(
             "decision_agent_actuation_fired_total",
             "Actuation requests emitted",
@@ -98,10 +76,8 @@ class DecisionAgentRuntime:
     async def run(self) -> None:
         configure_logging(level=self._settings.log_level)
         amqp_conn = await aio_pika.connect_robust(self._settings.amqp_url)
-
         async with amqp_conn:
-            amqp_channel = await amqp_conn.channel()
-
+            channel = await amqp_conn.channel()
             async with aiomqtt.Client(
                 hostname=self._settings.mqtt_host,
                 port=self._settings.mqtt_port,
@@ -112,34 +88,38 @@ class DecisionAgentRuntime:
                 _log.info(
                     "decision_agent_ready",
                     topic=self._settings.subscribe_topic,
-                    threshold=self._settings.threshold,
+                    enabled=self._settings.enabled,
                 )
-
                 async for message in mqtt.messages:
                     try:
                         payload = json.loads(message.payload)
-                        value = float(payload["sosa:hasSimpleResult"])
-                        correlation_id = payload.get("eirvah:correlationId") or generate_correlation_id()
-                        ts = datetime.now(UTC)
-                        req = self._window.update(value=value, ts=ts, correlation_id=correlation_id)
-                        if req is not None:
-                            await amqp_channel.default_exchange.publish(
-                                aio_pika.Message(
-                                    body=req.model_dump_json().encode(),
-                                    delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
-                                ),
-                                routing_key=self._settings.amqp_queue,
-                            )
-                            self._fired.labels(reason="threshold_breach").inc()
-                            _log.info(
-                                "actuation_request_emitted",
-                                correlation_id=req.correlation_id,
-                                value=value,
-                            )
+                        if payload.get("eirvah:unit") != "m/s":
+                            continue
+                        req = self._rule.update(
+                            speed=payload["sosa:hasSimpleResult"],
+                            observed_at=datetime.fromisoformat(payload["sosa:resultTime"]),
+                            now=datetime.now(UTC),
+                            quality=payload.get("eirvah:quality", "unknown"),
+                        )
+                        if req is None:
+                            continue
+                        await channel.default_exchange.publish(
+                            aio_pika.Message(
+                                body=req.model_dump_json().encode(),
+                                delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
+                            ),
+                            routing_key=self._settings.amqp_queue,
+                        )
+                        self._fired.labels(reason="production_mode_change").inc()
+                        _log.info(
+                            "actuation_request_emitted",
+                            correlation_id=req.correlation_id,
+                            target=req.requested_value,
+                            observation_id=payload.get("eirvah:correlationId"),
+                        )
                     except Exception as exc:
                         _log.warning("message_processing_error", error=str(exc))
 
 
 async def run(settings: DecisionAgentSettings) -> None:
-    runtime = DecisionAgentRuntime(settings)
-    await runtime.run()
+    await DecisionAgentRuntime(settings).run()

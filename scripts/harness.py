@@ -32,6 +32,7 @@ class HarnessConfig:
     prometheus_port: int = 9090
     nats_port: int = 4222
     opcua_port: int = 4840
+    amqp_port: int = 5672
     output_dir: Path = field(default_factory=lambda: Path("results"))
     duration: int | None = None
     rate: int = 500
@@ -380,12 +381,15 @@ async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
         "scripts/disturbance.py",
         "--interval",
         "120",
+        "--amqp-url",
+        f"amqp://eirvah:eirvah-dev-password@localhost:{cfg.amqp_port}/",
         "--endpoint",
         f"opc.tcp://localhost:{cfg.opcua_port}/eirvah/simulator",
     ]
     async with (
         port_forward("svc/prometheus", cfg.prometheus_port, 9090, cfg.namespace, cfg.dry_run),
         port_forward("svc/opcua-simulator", cfg.opcua_port, 4840, cfg.namespace, cfg.dry_run),
+        port_forward("svc/rabbitmq", cfg.amqp_port, 5672, cfg.namespace, cfg.dry_run),
     ):
         if cfg.dry_run:
             print(f"[dry-run] {' '.join(cmd)}")
@@ -522,7 +526,7 @@ def parse_args(argv: list[str] | None = None) -> HarnessConfig:
     run = sub.add_parser("run")
     run.add_argument("--experiment", required=True, choices=["a", "b", "c"])
     run.add_argument("--namespace", default="eirvah-edge")
-    for name, default in (("prometheus", 9090), ("nats", 4222), ("opcua", 4840)):
+    for name, default in (("prometheus", 9090), ("nats", 4222), ("opcua", 4840), ("amqp", 5672)):
         run.add_argument(f"--{name}-port", type=int, default=default)
     run.add_argument("--output-dir", type=Path, default=Path("results"))
     run.add_argument("--duration", type=int)

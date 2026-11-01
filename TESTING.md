@@ -1,3 +1,5 @@
+> Historical temperature-threshold demo: the current decision service instead selects a bottle-warmer recipe from conveyor speed-setpoint observations. Use [the current warmer checks](docs/experiments/warmer-control.md) for temperature, and [independent controls](docs/experiments/independent-controls.md) for other actuators. The threshold/cooldown and direct-setpoint disturbance instructions below describe the earlier implementation.
+
 # Manual demo tests
 
 Three copy-paste tests against a running `./scripts/dev_up.sh` cluster, for

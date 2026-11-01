@@ -24,6 +24,18 @@ spec:
               value: eirvah-dev-password
             - name: DECISION_AGENT_STUB_AMQP_URL
               value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+            - name: DECISION_AGENT_STUB_SUBSCRIBE_TOPIC
+              value: uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint
+            - name: DECISION_AGENT_STUB_ENABLED
+              value: "true"
+            - name: DECISION_AGENT_STUB_NORMAL_SPEED_MAX
+              value: "0.5"
+            - name: DECISION_AGENT_STUB_HIGH_SPEED_MIN
+              value: "0.6"
+            - name: DECISION_AGENT_STUB_NORMAL_SETPOINT
+              value: "22.0"
+            - name: DECISION_AGENT_STUB_HIGH_SETPOINT
+              value: "26.0"
           resources:
             requests: { cpu: "10m", memory: "64Mi" }
             limits:   { cpu: "100m", memory: "128Mi" }

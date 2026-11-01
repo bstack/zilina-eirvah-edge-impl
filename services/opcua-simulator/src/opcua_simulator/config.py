@@ -24,4 +24,8 @@ class SimulatorSettings(BaseSettings):
     http_port: int = Field(default=8080, ge=1024, le=65535)
     hot_spike_probability: float = Field(default=0.0, ge=0.0, le=1.0)
     motor_fault_probability: float = Field(default=0.0, ge=0.0, le=1.0)
+    temperature_time_constant_s: float = Field(default=10.0, gt=0, allow_inf_nan=False)
+    temperature_noise: float = Field(default=0.05, ge=0, allow_inf_nan=False)
+    cooling_rate_celsius_per_s: float = Field(default=0.5, gt=0, allow_inf_nan=False)
+    cooling_duration_s: float = Field(default=10.0, gt=0, allow_inf_nan=False)
     log_level: str = "INFO"

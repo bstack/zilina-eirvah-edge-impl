@@ -46,7 +46,7 @@ Reset a faulted conveyor or capper using `--action reset`. Resetting a healthy m
 uv run python scripts/control.py --target reject --action reject --value 42
 ```
 
-The example ID is not guaranteed to be present. Do not retry an uncertain rejection automatically. The CLI prints the command ID and waits for the correlated application result. This is a single-command functional tool, not the planned controlled-workload generator. The `experiment-driver` requester is allowed only by the explicit local policies; the existing decision stub remains a temperature controller.
+The example ID is not guaranteed to be present. Do not retry an uncertain rejection automatically. The CLI prints the command ID and waits for the correlated application result. This is a single-command functional tool, not the planned controlled-workload generator. The `experiment-driver` requester is allowed only by the explicit local policies; the decision stub selects a warmer temperature recipe from conveyor speed-setpoint observations; see [warmer control](warmer-control.md).
 
 ## Native command and feedback mapping
 
@@ -64,7 +64,7 @@ The S7 capper mailbox uses DB3 bytes 0–5; acknowledgement is at bytes 6–9. P
 
 The writer currently serializes commands and has one replica. Do not independently scale physical-write ownership without the later coordination policy. Mailbox sequence numbers are short-lived transport correlation, not durable application command identities. Device acknowledgement timeout is uncertain; the existing orchestrator's complete unknown-outcome and retry semantics remain work for the command-contract stage.
 
-Modbus feedback addresses 8–11 and the S7 DB3 feedback are polled by the existing subscribers. Added conversion rules and SOSA ontology entries route them through the normal UNS publication path. New Prometheus control gauges and the Controlled actuators dashboard row expose the corresponding state. Temperature remains the existing closed-loop baseline.
+Modbus feedback addresses 8–11 and the S7 DB3 feedback are polled by the existing subscribers. Added conversion rules and SOSA ontology entries route them through the normal UNS publication path. New Prometheus control gauges and the Controlled actuators dashboard row expose the corresponding state. Temperature is a simulated bottle-conditioning warmer with an implicit local regulator and a supervisory recipe-selection rule; see [warmer control](warmer-control.md).
 
 ## Validation and deployment boundary
 

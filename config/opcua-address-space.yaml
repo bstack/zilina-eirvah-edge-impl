@@ -1,3 +1,4 @@
+# Temperature nodes represent a simplified bottle-conditioning warmer; IDs are retained.
 # Bottling-line address space (spec §9.1).
 namespace: "https://eirvah.uniza/zilina/factory1"
 uns_defaults:

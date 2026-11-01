@@ -17,7 +17,7 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Temperature vs setpoint",
+      "title": "Bottle warmer: zone temperature vs recipe setpoint",
       "gridPos": {
         "x": 0,
         "y": 0,
@@ -45,7 +45,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Current setpoint (\u00b0C)",
+      "title": "Warmer recipe setpoint (\u00b0C)",
       "gridPos": {
         "x": 12,
         "y": 0,

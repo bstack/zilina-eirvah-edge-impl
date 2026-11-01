@@ -100,7 +100,7 @@ Prometheus scrapes `/metrics` from every pod (including the three brokers); Graf
 
 ### Loop-closer and infrastructure
 
-- **`decision-agent-stub`** — Subscribes to UNS topics on Mosquitto; when the bottling-line temperature crosses a configured threshold, publishes an actuation request onto RabbitMQ targeting the writable setpoint. The only "fake" component in the slice — it stands in for the real decision/analytics layer, which lives in a sibling repo.
+- **`decision-agent-stub`** — Subscribes to UNS topics on Mosquitto; selects a bottle-warmer temperature recipe from conveyor speed-setpoint observations and publishes the command through RabbitMQ. This is a deterministic supervisory policy; the simulator represents the local temperature regulator. The only "fake" component in the slice — it stands in for the real decision/analytics layer, which lives in a sibling repo.
 - **`nats`** — Single-replica NATS server (no JetStream) — the internal request-reply bus both orchestrators run on.
 - **`mosquitto`** — Single-replica MQTT broker; the public UNS telemetry surface. Anonymous auth disabled, basic credentials from a Secret.
 - **`rabbitmq`** — Single-replica RabbitMQ with the management and Prometheus plugins enabled; the public UNS event surface for actuation requests, with queues/users declared via a definitions file.
@@ -161,3 +161,5 @@ This repo is Apache-2.0 licensed. Every runtime and build dependency is OSI-appr
 ## Independent actuator controls
 
 The five-target functional implementation and native OPC UA/Modbus/S7 mappings are described in [Independent controls](docs/experiments/independent-controls.md).
+
+Bottle-conditioning warmer model, assumptions and local checks: [warmer-control.md](docs/experiments/warmer-control.md).
