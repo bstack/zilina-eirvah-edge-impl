@@ -27,7 +27,10 @@ spec:
             - name: DECISION_AGENT_STUB_MQTT_PASSWORD
               value: eirvah-dev-password
             - name: DECISION_AGENT_STUB_AMQP_URL
-              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: decision-amqp-url
             - name: DECISION_AGENT_STUB_SUBSCRIBE_TOPIC
               value: uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint
             - name: DECISION_AGENT_STUB_ENABLED

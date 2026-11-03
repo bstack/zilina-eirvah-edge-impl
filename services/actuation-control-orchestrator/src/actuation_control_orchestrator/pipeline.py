@@ -15,6 +15,7 @@ from eirvah_contracts.actuation import (
     ActuationRequest,
     ValidationResult,
 )
+from eirvah_contracts.authorization import ApprovedWriteRequest, AuthenticatedRequest
 from eirvah_contracts.envelope import NATSEnvelope
 from nats.aio.client import Client as NATSClient
 
@@ -40,7 +41,10 @@ async def run_actuation_pipeline(
     ingress_at = datetime.now(UTC)
 
     try:
-        req = ActuationRequest.model_validate(envelope.payload)
+        authenticated = AuthenticatedRequest.model_validate(envelope.payload)
+        req = authenticated.command
+        if req.correlation_id != envelope.correlation_id:
+            raise ValueError("command envelope identity mismatch")
     except Exception as exc:
         _log.warning("bad_actuation_envelope", error=str(exc))
         return
@@ -65,29 +69,39 @@ async def run_actuation_pipeline(
             subject=validate_stage.subject,
             payload=NATSEnvelope(
                 correlation_id=correlation_id,
-                payload=req.model_dump(mode="json"),
-            ).model_dump_json().encode(),
+                payload=authenticated.model_dump(mode="json"),
+            )
+            .model_dump_json()
+            .encode(),
             correlation_id=correlation_id,
             timeout_s=validate_stage.timeout_s,
         )
     except RequestTimeout:
         metrics.inc_stage_timeout(path=_PATH, stage="validate")
         _log.warning("validate_timeout", correlation_id=correlation_id)
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="validate_timeout")
+        await _emit_reject(
+            nc, cfg.dlq_subject, amqp_results_exchange, req, reason="validate_timeout"
+        )
         metrics.inc_rejected(path=_PATH, reason="validate_timeout")
         return
     except Exception as exc:
         _log.warning("validate_error", error=str(exc), correlation_id=correlation_id)
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason=type(exc).__name__)
+        await _emit_reject(
+            nc, cfg.dlq_subject, amqp_results_exchange, req, reason=type(exc).__name__
+        )
         metrics.inc_rejected(path=_PATH, reason=type(exc).__name__)
         return
 
     try:
         reply_env = NATSEnvelope.model_validate_json(reply_msg.data)
+        if reply_env.status != "ok" or reply_env.correlation_id != correlation_id:
+            raise ValueError("invalid validation reply")
         validation = ValidationResult.model_validate(reply_env.payload)
     except Exception as exc:
         _log.warning("validate_bad_reply", error=str(exc), correlation_id=correlation_id)
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="bad_validate_reply")
+        await _emit_reject(
+            nc, cfg.dlq_subject, amqp_results_exchange, req, reason="bad_validate_reply"
+        )
         metrics.inc_rejected(path=_PATH, reason="bad_validate_reply")
         return
 
@@ -97,9 +111,18 @@ async def run_actuation_pipeline(
         metrics.inc_rejected(path=_PATH, reason=validation.reason_code or "policy_reject")
         return
 
+    if validation.approval is None:
+        await _emit_reject(
+            nc, cfg.dlq_subject, amqp_results_exchange, req, reason="missing_approval"
+        )
+        metrics.inc_rejected(path=_PATH, reason="missing_approval")
+        return
+
     # Safety gate
     if not allow_writes:
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="writes_disabled")
+        await _emit_reject(
+            nc, cfg.dlq_subject, amqp_results_exchange, req, reason="writes_disabled"
+        )
         metrics.inc_rejected(path=_PATH, reason="writes_disabled")
         return
 
@@ -115,8 +138,12 @@ async def run_actuation_pipeline(
             subject=write_stage.subject,
             payload=NATSEnvelope(
                 correlation_id=correlation_id,
-                payload=req.model_dump(mode="json"),
-            ).model_dump_json().encode(),
+                payload=ApprovedWriteRequest(command=req, approval=validation.approval).model_dump(
+                    mode="json"
+                ),
+            )
+            .model_dump_json()
+            .encode(),
             correlation_id=correlation_id,
             timeout_s=write_stage.timeout_s,
         )
@@ -126,7 +153,9 @@ async def run_actuation_pipeline(
         metrics.inc_rejected(path=_PATH, reason="write_timeout")
         return
     except Exception as exc:
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason=type(exc).__name__)
+        await _emit_reject(
+            nc, cfg.dlq_subject, amqp_results_exchange, req, reason=type(exc).__name__
+        )
         metrics.inc_rejected(path=_PATH, reason=type(exc).__name__)
         return
 

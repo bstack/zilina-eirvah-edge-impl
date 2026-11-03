@@ -22,7 +22,10 @@ spec:
             - name: ACTUATION_CONTROL_ORCHESTRATOR_NATS_SERVERS
               value: '["nats://nats:4222"]'
             - name: ACTUATION_CONTROL_ORCHESTRATOR_AMQP_URL
-              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: coordinator-amqp-url
             - name: ACTUATION_CONTROL_ORCHESTRATOR_ALLOW_WRITES
               value: "false"
           ports:

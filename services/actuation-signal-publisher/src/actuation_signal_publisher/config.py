@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,9 @@ class SignalPublisherSettings(BaseSettings):
         env_file=None,
         extra="ignore",
     )
+
+    approval_key: SecretStr = SecretStr("")
+    writer_id: str = "actuation-signal-publisher"
 
     nats_servers: list[str] = ["nats://nats:4222"]
     mapping_path: Path = Path("/etc/actuation-signal-publisher/opcua-node-to-uns-mapping.yaml")

@@ -9,6 +9,7 @@ import structlog
 import uvicorn
 from eirvah_bus.client import BusClient
 from eirvah_contracts.actuation import ActuationRequest
+from eirvah_contracts.authorization import AuthenticatedRequest, require_key, sign_ingress
 from eirvah_contracts.envelope import NATSEnvelope
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
@@ -20,11 +21,14 @@ _log = structlog.get_logger("amqp-actuation-event-subscriber")
 NATS_SUBJECT = "act.ingress.requested"
 
 
-def build_nats_envelope(amqp_body: bytes) -> NATSEnvelope:
-    req = ActuationRequest.model_validate_json(amqp_body)
+def build_nats_envelope(amqp_body: bytes, *, user_id: str | None, ingress_key: str) -> NATSEnvelope:
+    if user_id not in {"decision-agent-stub", "experiment-driver"}:
+        raise ValueError("authenticated command publisher required")
+    req = ActuationRequest.model_validate_json(amqp_body).model_copy(update={"requester": user_id})
+    authenticated = AuthenticatedRequest(command=req, identity=sign_ingress(req, ingress_key))
     return NATSEnvelope(
         correlation_id=req.correlation_id,
-        payload=req.model_dump(mode="json"),
+        payload=authenticated.model_dump(mode="json"),
     )
 
 
@@ -42,6 +46,7 @@ class AmqpSubscriberRuntime:
         return self._ready
 
     async def run(self) -> None:
+        require_key(self._settings.ingress_key.get_secret_value())
         bus = BusClient(servers=self._settings.nats_servers, name="amqp-actuation-event-subscriber")
         await bus.connect()
         _log.info("nats_connected")
@@ -57,7 +62,17 @@ class AmqpSubscriberRuntime:
             async with queue.iterator() as queue_iter:
                 async for message in queue_iter:
                     try:
-                        envelope = build_nats_envelope(message.body)
+                        try:
+                            envelope = build_nats_envelope(
+                                message.body,
+                                user_id=message.user_id,
+                                ingress_key=self._settings.ingress_key.get_secret_value(),
+                            )
+                        except (ValueError, TypeError):
+                            await message.reject(requeue=False)
+                            self._handled.labels(outcome="unauthorized_or_invalid").inc()
+                            _log.warning("command_ingress_refused")
+                            continue
                         await bus.nc.publish(
                             NATS_SUBJECT,
                             envelope.model_dump_json().encode(),

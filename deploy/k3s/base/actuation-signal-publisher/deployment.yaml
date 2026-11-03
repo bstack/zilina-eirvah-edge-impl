@@ -19,6 +19,11 @@ spec:
           image: actuation-signal-publisher:local
           imagePullPolicy: IfNotPresent
           env:
+            - name: ACTUATION_SIGNAL_PUBLISHER_APPROVAL_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: approval-key
             - name: ACTUATION_SIGNAL_PUBLISHER_NATS_SERVERS
               value: '["nats://nats:4222"]'
             - name: ACTUATION_SIGNAL_PUBLISHER_ENTERPRISE

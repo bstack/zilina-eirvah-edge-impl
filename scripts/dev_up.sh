@@ -36,14 +36,14 @@ else
 fi
 
 # 1b. metrics-server (required for HPA — not bundled with kind)
-if ! kubectl get deployment metrics-server -n kube-system &>/dev/null; then
+if ! kubectl --context "kind-${CLUSTER}" get deployment metrics-server -n kube-system &>/dev/null; then
   echo "==> installing metrics-server"
-  kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+  kubectl --context "kind-${CLUSTER}" apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
   # kind clusters use self-signed kubelet certs — insecure-tls required
-  kubectl patch deployment metrics-server -n kube-system \
+  kubectl --context "kind-${CLUSTER}" patch deployment metrics-server -n kube-system \
     --type=json \
     -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
-  kubectl -n kube-system rollout status deployment/metrics-server --timeout=90s
+  kubectl --context "kind-${CLUSTER}" -n kube-system rollout status deployment/metrics-server --timeout=90s
 else
   echo "==> metrics-server already installed"
 fi
@@ -56,13 +56,17 @@ for svc in "${SERVICES[@]}"; do
   kind load docker-image "${svc}:local" --name "${CLUSTER}"
 done
 
-# 3. Apply manifests
+# 3. Command authentication material (retain existing keys on subsequent runs).
+kubectl --context "kind-${CLUSTER}" apply -f deploy/k3s/base/namespace.yaml
+uv run python scripts/configure_actuation_security.py --context "kind-${CLUSTER}" --namespace "${NAMESPACE}"
+
+# 3b. Apply manifests
 echo "==> applying deploy/k3s/overlays/local"
-kubectl apply -k deploy/k3s/overlays/local
+kubectl --context "kind-${CLUSTER}" apply -k deploy/k3s/overlays/local
 
 # 4. Wait for readiness
 echo "==> waiting for all deployments to become Available (up to 5 min)"
-kubectl -n "${NAMESPACE}" wait \
+kubectl --context "kind-${CLUSTER}" -n "${NAMESPACE}" wait \
   --for=condition=Available \
   --timeout=300s \
   deployment --all
@@ -70,14 +74,14 @@ kubectl -n "${NAMESPACE}" wait \
 # 5. Hints
 echo ""
 echo "==> stack is up."
-echo "    Grafana:       kubectl -n ${NAMESPACE} port-forward svc/grafana 3000:3000"
-echo "    Prometheus:    kubectl -n ${NAMESPACE} port-forward svc/prometheus 9090:9090"
-echo "    OPC UA:        kubectl -n ${NAMESPACE} port-forward svc/opcua-simulator 4840:4840"
-echo "    Modbus:        kubectl -n ${NAMESPACE} port-forward svc/modbus-simulator 5020:5020"
-echo "    S7:            kubectl -n ${NAMESPACE} port-forward svc/s7-simulator 102:102"
-echo "    Mosquitto:     kubectl -n ${NAMESPACE} port-forward svc/mosquitto 1883:1883"
-echo "    NATS:          kubectl -n ${NAMESPACE} port-forward svc/nats 4222:4222"
-echo "    RabbitMQ:      kubectl -n ${NAMESPACE} port-forward svc/rabbitmq 15672:15672"
+echo "    Grafana:       kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/grafana 3000:3000"
+echo "    Prometheus:    kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/prometheus 9090:9090"
+echo "    OPC UA:        kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/opcua-simulator 4840:4840"
+echo "    Modbus:        kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/modbus-simulator 5020:5020"
+echo "    S7:            kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/s7-simulator 102:102"
+echo "    Mosquitto:     kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/mosquitto 1883:1883"
+echo "    NATS:          kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/nats 4222:4222"
+echo "    RabbitMQ:      kubectl --context "kind-${CLUSTER}" -n ${NAMESPACE} port-forward svc/rabbitmq 15672:15672"
 echo "    Credentials:   admin / eirvah-dev-grafana (Grafana)"
 echo ""
 echo "    NOTE: Before first run, regenerate the Mosquitto password hash:"

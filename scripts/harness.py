@@ -376,13 +376,15 @@ _QUERIES_B = {
 
 
 async def run_experiment_a(cfg: HarnessConfig, out_dir: Path) -> dict[str, Any]:
+    if not cfg.dry_run and not os.environ.get("EIRVAH_COMMAND_AMQP_URL"):
+        raise ValueError(
+            "Set EIRVAH_COMMAND_AMQP_URL with experiment-driver credentials before experiment a"
+        )
     cmd = [
         sys.executable,
         "scripts/disturbance.py",
         "--interval",
         "120",
-        "--amqp-url",
-        f"amqp://eirvah:eirvah-dev-password@localhost:{cfg.amqp_port}/",
         "--endpoint",
         f"opc.tcp://localhost:{cfg.opcua_port}/eirvah/simulator",
     ]

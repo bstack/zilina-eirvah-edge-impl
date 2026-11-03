@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
 
@@ -69,9 +70,11 @@ async def send(command: ActuationRequest, amqp_url: str) -> dict[str, Any]:
                     result.set_result(data)
 
         await queue.consume(consume)
-        await channel.default_exchange.publish(
+        commands = await channel.get_exchange("eirvah.actuation.commands")
+        await commands.publish(
             aio_pika.Message(
                 body=command.model_dump_json().encode(),
+                user_id="experiment-driver",
                 delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
             ),
             routing_key="eirvah.actuation.requests",
@@ -91,8 +94,10 @@ def main() -> None:
         required=True,
     )
     parser.add_argument("--value", type=json.loads)
-    parser.add_argument("--amqp-url", default="amqp://eirvah:eirvah-dev-password@localhost:5672/")
+    parser.add_argument("--amqp-url", default=os.environ.get("EIRVAH_COMMAND_AMQP_URL"))
     args = parser.parse_args()
+    if not args.amqp_url:
+        parser.error("set EIRVAH_COMMAND_AMQP_URL or --amqp-url with experiment-driver credentials")
     try:
         command = build_command(args.target, args.action, args.value)
     except ValueError as exc:

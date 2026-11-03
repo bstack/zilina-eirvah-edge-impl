@@ -19,10 +19,18 @@ spec:
           image: amqp-actuation-event-subscriber:local
           imagePullPolicy: IfNotPresent
           env:
+            - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_INGRESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: ingress-key
             - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_NATS_SERVERS
               value: '["nats://nats:4222"]'
             - name: AMQP_ACTUATION_EVENT_SUBSCRIBER_AMQP_URL
-              value: "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: ingress-amqp-url
           ports:
             - { name: http, containerPort: 8080 }
           readinessProbe:

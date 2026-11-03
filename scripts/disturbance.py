@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import math
+import os
 from datetime import UTC, datetime
 
 from asyncua import Client
@@ -51,9 +52,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--endpoint", default="opc.tcp://localhost:4840/eirvah/simulator")
     parser.add_argument("--namespace", default="https://eirvah.uniza/zilina/factory1")
-    parser.add_argument("--amqp-url", default="amqp://eirvah:eirvah-dev-password@localhost:5672/")
+    parser.add_argument("--amqp-url", default=os.environ.get("EIRVAH_COMMAND_AMQP_URL"))
     parser.add_argument("--interval", type=float, default=120.0)
     args = parser.parse_args()
+    if not args.amqp_url:
+        parser.error("set EIRVAH_COMMAND_AMQP_URL or --amqp-url with experiment-driver credentials")
     if not math.isfinite(args.interval) or args.interval <= 0:
         parser.error("interval must be positive and finite")
     try:

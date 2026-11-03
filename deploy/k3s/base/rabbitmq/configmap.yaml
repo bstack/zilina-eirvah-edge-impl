@@ -5,7 +5,7 @@ metadata:
 data:
   rabbitmq.conf: |
     loopback_users.guest = false
-    load_definitions = /etc/rabbitmq/definitions.json
+    load_definitions = /run/actuation-security/definitions.json
     listeners.tcp.default = 5672
     management.tcp.port = 15672
     prometheus.tcp.port = 15692
@@ -25,8 +25,12 @@ data:
          "durable": true, "auto_delete": false, "arguments": {}}
       ],
       "exchanges": [
+        {"name": "eirvah.actuation.commands", "vhost": "/",
+         "type": "direct", "durable": true, "auto_delete": false, "arguments": {}},
         {"name": "eirvah.actuation.results", "vhost": "/",
          "type": "topic", "durable": true, "auto_delete": false, "arguments": {}}
       ],
-      "bindings": []
+      "bindings": [{"source": "eirvah.actuation.commands", "vhost": "/",
+                    "destination": "eirvah.actuation.requests", "destination_type": "queue",
+                    "routing_key": "eirvah.actuation.requests", "arguments": {}}]
     }

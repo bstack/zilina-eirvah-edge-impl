@@ -149,11 +149,8 @@ class DecisionAgentRuntime:
         amqp_conn = await aio_pika.connect_robust(self._settings.amqp_url)
         async with amqp_conn:
             channel = await amqp_conn.channel()
-            results = await channel.declare_exchange(
-                "eirvah.actuation.results",
-                aio_pika.ExchangeType.TOPIC,
-                durable=True,
-            )
+            commands = await channel.get_exchange("eirvah.actuation.commands")
+            results = await channel.get_exchange("eirvah.actuation.results")
             result_queue = await channel.declare_queue(exclusive=True, auto_delete=True)
             await result_queue.bind(results, routing_key="actuation.result")
             await result_queue.consume(self._result)
@@ -184,9 +181,10 @@ class DecisionAgentRuntime:
                         )
                         if request is None:
                             continue
-                        await channel.default_exchange.publish(
+                        await commands.publish(
                             aio_pika.Message(
                                 body=request.model_dump_json().encode(),
+                                user_id="decision-agent-stub",
                                 delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
                             ),
                             routing_key=self._settings.amqp_queue,

@@ -15,6 +15,7 @@ KNOWN_REJECTION_REASONS = (
     "not_numeric",
     "policy_reject",  # fallback if a validator reply omits reason_code
     "expired",
+    "missing_approval",
     "validate_timeout",
     "bad_validate_reply",
     "writes_disabled",

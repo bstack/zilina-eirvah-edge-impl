@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -13,7 +14,7 @@ import yaml
 from asyncua import Client
 from eirvah_bus.client import BusClient
 from eirvah_bus.consumer import subscribe_queue_group
-from eirvah_contracts.actuation import ActuationRequest
+from eirvah_contracts.authorization import ApprovedWriteRequest, require_key, verify_evidence
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
@@ -88,11 +89,14 @@ async def write_opcua_value(
     *,
     target: WriteTarget,
     value: Any,
+    before_write: Callable[[], None] | None = None,
 ) -> None:
     async with Client(url=target.endpoint) as client:
         ns_idx = await client.get_namespace_index(target.namespace_uri)
         path = [f"{ns_idx}:{name}" for name in target.browse_names]
         node = await client.nodes.objects.get_child(path)
+        if before_write is not None:
+            before_write()
         await node.write_value(value)
 
 
@@ -112,6 +116,7 @@ class SignalPublisherWorker:
         return self._ready
 
     async def run(self) -> None:
+        require_key(self._settings.approval_key.get_secret_value())
         self._targets = load_write_targets(
             mapping_path=self._settings.mapping_path,
             node_list_path=self._settings.node_list_path,
@@ -131,16 +136,32 @@ class SignalPublisherWorker:
         try:
             envelope = NATSEnvelope.model_validate_json(msg.data)
             correlation_id = envelope.correlation_id
-            req = ActuationRequest.model_validate(envelope.payload)
+            approved = ApprovedWriteRequest.model_validate(envelope.payload)
+            req = approved.command
+            if req.correlation_id != correlation_id:
+                raise ValueError("command envelope identity mismatch")
+
+            def before_write() -> None:
+                verify_evidence(
+                    req,
+                    approved.approval,
+                    self._settings.approval_key.get_secret_value(),
+                    "approval",
+                    self._settings.writer_id,
+                )
+
+            before_write()
 
             native = self._native_targets.get(req.target_uns_topic)
             if native is not None:
-                await write_native_value(native, req.requested_value)
+                await write_native_value(native, req.requested_value, before_write=before_write)
             else:
                 target = self._targets.get(req.target_uns_topic)
                 if target is None:
                     raise ValueError(f"no write target for topic {req.target_uns_topic!r}")
-                await write_opcua_value(target=target, value=req.requested_value)
+                await write_opcua_value(
+                    target=target, value=req.requested_value, before_write=before_write
+                )
 
             self._handled.labels(worker="actuation-signal-publisher", outcome="ok").inc()
             reply = NATSEnvelope(correlation_id=correlation_id)

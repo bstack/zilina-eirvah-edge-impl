@@ -9,12 +9,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from eirvah_contracts.actuation import ActuationRequest, ValidationResult
+from eirvah_contracts.authorization import AuthenticatedRequest, sign_approval, sign_ingress
 from eirvah_contracts.envelope import NATSEnvelope
 from eirvah_contracts.ulid import generate_correlation_id
 from prometheus_client.registry import CollectorRegistry
 
-
 # ── helpers ──────────────────────────────────────────────────────────────────
+
 
 def _sample_request(*, deadline: datetime | None = None) -> ActuationRequest:
     now = datetime.now(UTC)
@@ -28,14 +29,16 @@ def _sample_request(*, deadline: datetime | None = None) -> ActuationRequest:
         value_type="double",
         reason="test",
         requested_at=now,
-        deadline=deadline,
+        deadline=deadline or now + timedelta(seconds=10),
     )
 
 
 def _actuation_envelope(req: ActuationRequest) -> NATSEnvelope:
     return NATSEnvelope(
         correlation_id=req.correlation_id,
-        payload=req.model_dump(mode="json"),
+        payload=AuthenticatedRequest(
+            command=req, identity=sign_ingress(req, "test-ingress-key-with-at-least-32-bytes")
+        ).model_dump(mode="json"),
     )
 
 
@@ -60,6 +63,7 @@ def _make_cfg(
 
 
 # ── models ──────────────────────────────────────────────────────────────────
+
 
 def test_pipeline_config_loads_from_yaml(tmp_path: Path) -> None:
     from actuation_control_orchestrator.models import load_pipeline_config
@@ -86,6 +90,7 @@ def test_pipeline_config_loads_from_yaml(tmp_path: Path) -> None:
 
 # ── metrics ──────────────────────────────────────────────────────────────────
 
+
 def test_actuation_metrics_create_without_error() -> None:
     from actuation_control_orchestrator.metrics import ActuationMetrics
 
@@ -110,12 +115,16 @@ def test_actuation_metrics_pre_registers_known_rejection_reasons() -> None:
     ActuationMetrics(registry=reg)
 
     for reason in KNOWN_REJECTION_REASONS:
-        assert reg.get_sample_value(
-            "eirvah_actuation_rejected_total", {"path": "actuation", "reason": reason}
-        ) == 0
+        assert (
+            reg.get_sample_value(
+                "eirvah_actuation_rejected_total", {"path": "actuation", "reason": reason}
+            )
+            == 0
+        )
 
 
 # ── pipeline runner ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_run_actuation_pipeline_approve_writes_disabled() -> None:
@@ -127,7 +136,12 @@ async def test_run_actuation_pipeline_approve_writes_disabled() -> None:
     envelope = _actuation_envelope(req)
     cfg = _make_cfg()
 
-    validation_ok = ValidationResult(decision="approve")
+    validation_ok = ValidationResult(
+        decision="approve",
+        approval=sign_approval(
+            req, "test-approval-key-with-at-least-32-bytes", "actuation-signal-publisher"
+        ),
+    )
 
     async def fake_request_reply(*, nc, subject, payload, correlation_id, timeout_s):
         msg = MagicMock()
@@ -241,7 +255,12 @@ async def test_run_actuation_pipeline_approve_writes_enabled() -> None:
     envelope = _actuation_envelope(req)
     cfg = _make_cfg()
 
-    validation_ok = ValidationResult(decision="approve")
+    validation_ok = ValidationResult(
+        decision="approve",
+        approval=sign_approval(
+            req, "test-approval-key-with-at-least-32-bytes", "actuation-signal-publisher"
+        ),
+    )
 
     async def fake_request_reply(*, nc, subject, payload, correlation_id, timeout_s):
         msg = MagicMock()
@@ -291,7 +310,13 @@ async def test_run_actuation_pipeline_deadline_expired() -> None:
 
     past_deadline = datetime.now(UTC) - timedelta(seconds=5)
     req = _sample_request(deadline=past_deadline)
-    envelope = _actuation_envelope(req)
+    from unittest.mock import patch
+
+    with patch(
+        "eirvah_contracts.authorization.current_time",
+        return_value=past_deadline - timedelta(seconds=1),
+    ):
+        envelope = _actuation_envelope(req)
     cfg = _make_cfg()
 
     request_reply_mock = AsyncMock()

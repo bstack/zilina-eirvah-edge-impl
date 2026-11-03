@@ -12,6 +12,12 @@ import yaml
 from eirvah_bus.client import BusClient
 from eirvah_bus.consumer import subscribe_queue_group
 from eirvah_contracts.actuation import ActuationRequest, ValidationResult
+from eirvah_contracts.authorization import (
+    AuthenticatedRequest,
+    require_key,
+    sign_approval,
+    verify_evidence,
+)
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
 from eirvah_contracts.signals import SignalValueType
 from eirvah_observability.health import HealthApp
@@ -102,6 +108,8 @@ class ValidatorWorker:
         return self._ready
 
     async def run(self) -> None:
+        require_key(self._settings.ingress_key.get_secret_value())
+        require_key(self._settings.approval_key.get_secret_value())
         self._policies = load_policy(self._settings.policy_path)
         bus = BusClient(servers=self._settings.nats_servers, name="actuation-event-validator")
         await bus.connect()
@@ -115,8 +123,24 @@ class ValidatorWorker:
         try:
             envelope = NATSEnvelope.model_validate_json(msg.data)
             correlation_id = envelope.correlation_id
-            req = ActuationRequest.model_validate(envelope.payload)
+            authenticated = AuthenticatedRequest.model_validate(envelope.payload)
+            req = authenticated.command
+            if req.correlation_id != correlation_id:
+                raise ValueError("command envelope identity mismatch")
+            verify_evidence(
+                req,
+                authenticated.identity,
+                self._settings.ingress_key.get_secret_value(),
+                "ingress",
+                "",
+            )
             result = validate_request(req, self._policies)
+            if result.decision == "approve":
+                result.approval = sign_approval(
+                    req,
+                    self._settings.approval_key.get_secret_value(),
+                    self._settings.approved_writer,
+                )
             self._handled.labels(worker="actuation-event-validator", outcome=result.decision).inc()
             reply = NATSEnvelope(
                 correlation_id=correlation_id,

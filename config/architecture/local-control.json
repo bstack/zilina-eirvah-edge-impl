@@ -639,6 +639,28 @@
         "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
       ],
       "note": "A refinement binding is documented here; complete receiver compatibility and policy checks remain pending."
+    },
+    {
+      "id": "authenticated-command",
+      "kind": "command",
+      "model": "AuthenticatedRequest",
+      "wire_version": "1.0",
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/authorization.py"
+      ],
+      "note": "HMAC-bound command contract implemented; end-to-end runtime conformance and recovery policies remain pending."
+    },
+    {
+      "id": "approved-command",
+      "kind": "command",
+      "model": "ApprovedWriteRequest",
+      "wire_version": "1.0",
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/authorization.py"
+      ],
+      "note": "HMAC-bound command contract implemented; end-to-end runtime conformance and recovery policies remain pending."
     }
   ],
   "channels": [
@@ -808,7 +830,9 @@
         "scripts/control.py"
       ],
       "envelope": "ActuationRequest",
-      "address_kind": "queue via default exchange"
+      "address_kind": "queue bound to a dedicated direct exchange",
+      "exchange": "eirvah.actuation.commands",
+      "identity": "RabbitMQ validated user_id; command bridge accepts decision-agent-stub and experiment-driver and overwrites requester before signing ingress evidence."
     },
     {
       "id": "actuation-ingress",
@@ -821,7 +845,7 @@
       "sources": [
         "services/amqp-actuation-event-subscriber/src/amqp_actuation_event_subscriber/service.py"
       ],
-      "envelope": "NATSEnvelope with ActuationRequest"
+      "envelope": "NATSEnvelope with AuthenticatedRequest (command plus HMAC ingress identity)"
     },
     {
       "id": "validate",
@@ -835,8 +859,8 @@
         "deploy/k3s/base/actuation-control-orchestrator/actuation-control.yaml",
         "services/actuation-event-validator/src/actuation_event_validator/service.py"
       ],
-      "request": "ActuationRequest inside NATSEnvelope",
-      "response": "ValidationResult"
+      "request": "AuthenticatedRequest inside NATSEnvelope",
+      "response": "ValidationResult with SignedEvidence approval on success"
     },
     {
       "id": "write",
@@ -850,8 +874,9 @@
         "deploy/k3s/base/actuation-control-orchestrator/actuation-control.yaml",
         "services/actuation-signal-publisher/src/actuation_signal_publisher/service.py"
       ],
-      "request": "ActuationRequest inside NATSEnvelope",
-      "response": "NATSEnvelope status"
+      "request": "ApprovedWriteRequest inside NATSEnvelope",
+      "response": "NATSEnvelope status",
+      "note": "Writer refuses unapproved requests, signature mismatch, wrong writer, altered command or expired approval."
     },
     {
       "id": "amqp-outcome",
@@ -1081,7 +1106,7 @@
       "source": "command-namespace",
       "target": "admission",
       "flow": "command",
-      "contract": "actuation-request",
+      "contract": "authenticated-command",
       "channels": [
         "actuation-ingress",
         "validate"
@@ -1092,12 +1117,12 @@
       "source": "admission",
       "target": "writer",
       "flow": "command",
-      "contract": "actuation-request",
+      "contract": "approved-command",
       "channels": [
         "write"
       ],
       "boundary": "internal_v5_handoff",
-      "note": "Current message is the original request; bound admission evidence is missing."
+      "note": "Versioned command plus HMAC approval bound to entire command, intended writer and deadline. Writer verifies at entry and again immediately before native writes."
     },
     {
       "id": "opcua-execute",
@@ -1610,8 +1635,8 @@
         "C07",
         "CR5"
       ],
-      "status": "open",
-      "description": "Writer receives the original request without trusted bound approval or authenticated requester evidence."
+      "status": "implemented_pending_cluster_verification",
+      "description": "Validated AMQP user_id establishes producer identity. Bridge signs ingress with a bridge/validator key; validator signs approval with a separate validator/writer key. Caller policy and signatures are checked; trusted-service assumptions and protected network remain explicit."
     },
     {
       "id": "writer_deadline",
@@ -1619,8 +1644,8 @@
         "C08",
         "CR5"
       ],
-      "status": "open",
-      "description": "Deadline is optional and checked at ingress, not immediately before writing."
+      "status": "implemented_pending_cluster_verification",
+      "description": "Secured commands require aware deadlines. Writer checks on receipt and at native write boundaries after connection setup. Cross-host clock uncertainty and runtime E0 cases remain pending."
     },
     {
       "id": "command_recovery",
@@ -1686,7 +1711,7 @@
       "description": "The declared graph is not a security boundary or proof that unlisted runtime connections cannot occur."
     }
   ],
-  "mapping_status": "initial_source_mapping",
+  "mapping_status": "source_mapping_with_authenticated_commands",
   "scenarios": [
     {
       "id": "warmer-production-mode",
@@ -1770,5 +1795,19 @@
       "id": "administrative-access",
       "purpose": "kubectl exec, port forwards and direct broker/device access are outside the permitted business graph; this manifest does not deny such access."
     }
-  ]
+  ],
+  "source_baseline_note": "Topology baseline pinned above; command security added subsequently in the working tree. Conformance remains not assessed.",
+  "security": {
+    "approach": "HMAC-SHA256 with independent ingress and approval keys",
+    "secret": "actuation-security",
+    "producer_identity": "RabbitMQ AMQP 0-9-1 validated user_id; no impersonator tags",
+    "command_exchange": "eirvah.actuation.commands",
+    "setup": "scripts/configure_actuation_security.py",
+    "trust": "Broker, bridge, validator, writer, Kubernetes administrators and secret provisioning are trusted. Either holder of a given HMAC key can generate that evidence.",
+    "limits": [
+      "No replay or at-most-once guarantee yet; repeated valid approval can execute again before expiry.",
+      "No TLS provided by this change; current setup assumes protected local network and clocks.",
+      "MQTT measurement authenticity and authenticated command outcome reports are not established by approval signing."
+    ]
+  }
 }

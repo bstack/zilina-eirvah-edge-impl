@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,6 +12,8 @@ class AmqpSubscriberSettings(BaseSettings):
         env_file=None,
         extra="ignore",
     )
+
+    ingress_key: SecretStr = SecretStr("")
 
     nats_servers: list[str] = ["nats://nats:4222"]
     amqp_url: str = "amqp://eirvah:eirvah-dev-password@rabbitmq:5672/"

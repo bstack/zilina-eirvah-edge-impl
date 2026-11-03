@@ -19,6 +19,16 @@ spec:
           image: actuation-event-validator:local
           imagePullPolicy: IfNotPresent
           env:
+            - name: ACTUATION_EVENT_VALIDATOR_APPROVAL_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: approval-key
+            - name: ACTUATION_EVENT_VALIDATOR_INGRESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: ingress-key
             - name: ACTUATION_EVENT_VALIDATOR_NATS_SERVERS
               value: '["nats://nats:4222"]'
           ports:

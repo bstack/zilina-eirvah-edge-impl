@@ -7,6 +7,7 @@ import math
 import secrets
 import struct
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Literal
 
@@ -78,7 +79,9 @@ def _check_ack(sequence: int, values: list[int]) -> bool:
     return True
 
 
-async def _write_modbus(target: NativeTarget, raw: int) -> None:
+async def _write_modbus(
+    target: NativeTarget, raw: int, before_write: Callable[[], None] | None = None
+) -> None:
     client = AsyncModbusTcpClient(target.host, port=target.port, timeout=target.timeout, retries=0)
     try:
         if not await client.connect():
@@ -98,6 +101,8 @@ async def _write_modbus(target: NativeTarget, raw: int) -> None:
             (target.command_address + 1, [target.operation, raw]),
             (target.command_address, [sequence]),
         ):
+            if before_write is not None:
+                before_write()
             reply = await client.write_registers(
                 address, [int(value) for value in values], slave=target.unit_id
             )
@@ -113,17 +118,23 @@ async def _write_modbus(target: NativeTarget, raw: int) -> None:
         client.close()
 
 
-def _write_s7(target: NativeTarget, raw: int) -> None:
+def _write_s7(
+    target: NativeTarget, raw: int, before_write: Callable[[], None] | None = None
+) -> None:
     client = S7Client()
     try:
         client.connect(target.host, target.rack, target.slot, tcp_port=target.port)
         previous = struct.unpack(">HH", client.db_read(target.db, target.ack_address, 4))[0]
         sequence = _sequence(previous)
+        if before_write is not None:
+            before_write()
         client.db_write(
             target.db,
             target.command_address + 2,
             bytearray(struct.pack(">HH", target.operation, raw)),
         )
+        if before_write is not None:
+            before_write()
         client.db_write(target.db, target.command_address, bytearray(struct.pack(">H", sequence)))
         deadline = time.monotonic() + target.timeout
         while time.monotonic() < deadline:
@@ -137,9 +148,11 @@ def _write_s7(target: NativeTarget, raw: int) -> None:
         client.destroy()
 
 
-async def write_native_value(target: NativeTarget, value: object) -> None:
+async def write_native_value(
+    target: NativeTarget, value: object, *, before_write: Callable[[], None] | None = None
+) -> None:
     raw = encode_value(target, value)
     if target.protocol == "modbus":
-        await _write_modbus(target, raw)
+        await _write_modbus(target, raw, before_write)
     else:
-        await asyncio.to_thread(_write_s7, target, raw)
+        await asyncio.to_thread(_write_s7, target, raw, before_write)

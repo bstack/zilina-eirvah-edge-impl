@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,6 +14,10 @@ class ValidatorSettings(BaseSettings):
         env_file=None,
         extra="ignore",
     )
+
+    ingress_key: SecretStr = SecretStr("")
+    approval_key: SecretStr = SecretStr("")
+    approved_writer: str = "actuation-signal-publisher"
 
     nats_servers: list[str] = ["nats://nats:4222"]
     policy_path: Path = Path("/etc/actuation-event-validator/actuation-policy.yaml")

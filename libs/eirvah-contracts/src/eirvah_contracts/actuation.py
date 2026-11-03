@@ -5,12 +5,11 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
 from eirvah_contracts.signals import SignalValue, SignalValueType
 from eirvah_contracts.ulid import is_valid_correlation_id
 from eirvah_contracts.uns import parse_uns_topic
-
 
 RejectionReasonCode = Literal["out_of_range", "not_allowlisted", "no_policy", "not_numeric"]
 """Stable, bounded rejection categories — used as a Prometheus label.
@@ -24,12 +23,26 @@ finite category counterpart callers should label metrics with instead.
 """
 
 
+class SignedEvidence(BaseModel):
+    """HMAC evidence for one immutable command and handoff purpose."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    schema_version: Literal["1.0"] = "1.0"
+    purpose: Literal["ingress", "approval"]
+    command_digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    writer: str
+    issued_at: AwareDatetime
+    signature: str = Field(pattern=r"^[0-9a-f]{64}$")
+
+
 class ValidationResult(BaseModel):
     """Returned by actuation-event-validator on act.work.validate (spec §3.2)."""
 
     decision: Literal["approve", "reject"]
     reason: str | None = None
     reason_code: RejectionReasonCode | None = None
+    approval: SignedEvidence | None = None
 
 
 class ActuationRequest(BaseModel):
