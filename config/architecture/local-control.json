@@ -1,0 +1,1774 @@
+{
+  "format_version": "1.0",
+  "id": "paper1-local-controls",
+  "scope": "Selected five controls, warmer production-mode rule, automatic inspection and rejection, and operational observation. Not the full proposal architecture.",
+  "source_baseline": "556f512ff0e479acd3308ccde53fc4733009721d",
+  "reference": "Paper 1 study plan v2.1 Definitions 1-8; Conformance Matrix v1.0 C01-C13",
+  "conformance_verdict": "not_assessed",
+  "profile": {
+    "roles": [
+      "physical",
+      "adapter",
+      "contextualizer",
+      "namespace",
+      "consumer",
+      "decision",
+      "executor",
+      "observer"
+    ],
+    "flow_kinds": [
+      "industrial_state",
+      "event",
+      "command",
+      "operational_telemetry"
+    ],
+    "groups": {
+      "v1": "Physical system",
+      "v2": "Integration and contextualization",
+      "v3": "UNS information space",
+      "v4": "Decision and supervision",
+      "v5": "Command validation and execution",
+      "v6": "Observability"
+    },
+    "permitted_interactions": [
+      [
+        "physical",
+        "industrial_state",
+        "adapter"
+      ],
+      [
+        "adapter",
+        "industrial_state",
+        "contextualizer"
+      ],
+      [
+        "contextualizer",
+        "industrial_state",
+        "namespace"
+      ],
+      [
+        "namespace",
+        "industrial_state",
+        "consumer"
+      ],
+      [
+        "namespace",
+        "industrial_state",
+        "decision"
+      ],
+      [
+        "physical",
+        "event",
+        "adapter"
+      ],
+      [
+        "adapter",
+        "event",
+        "contextualizer"
+      ],
+      [
+        "contextualizer",
+        "event",
+        "namespace"
+      ],
+      [
+        "consumer",
+        "event",
+        "namespace"
+      ],
+      [
+        "decision",
+        "event",
+        "namespace"
+      ],
+      [
+        "executor",
+        "event",
+        "namespace"
+      ],
+      [
+        "namespace",
+        "event",
+        "consumer"
+      ],
+      [
+        "namespace",
+        "event",
+        "decision"
+      ],
+      [
+        "executor",
+        "event",
+        "executor"
+      ],
+      [
+        "decision",
+        "command",
+        "namespace"
+      ],
+      [
+        "namespace",
+        "command",
+        "executor"
+      ],
+      [
+        "executor",
+        "command",
+        "executor"
+      ],
+      [
+        "executor",
+        "command",
+        "physical"
+      ],
+      [
+        "physical",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "adapter",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "contextualizer",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "namespace",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "consumer",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "decision",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "executor",
+        "operational_telemetry",
+        "observer"
+      ]
+    ],
+    "role_layers": {
+      "physical": [
+        "physical"
+      ],
+      "adapter": [
+        "data"
+      ],
+      "contextualizer": [
+        "data"
+      ],
+      "namespace": [
+        "data"
+      ],
+      "consumer": [
+        "data"
+      ],
+      "decision": [
+        "decision"
+      ],
+      "executor": [
+        "data"
+      ],
+      "observer": [
+        "physical",
+        "data",
+        "decision"
+      ]
+    }
+  },
+  "components": [
+    {
+      "id": "opcua-simulator",
+      "group": "v1",
+      "deployment": "opcua-simulator",
+      "sources": [
+        "deploy/k3s/base/opcua-simulator/deployment.yaml"
+      ]
+    },
+    {
+      "id": "modbus-simulator",
+      "group": "v1",
+      "deployment": "modbus-simulator",
+      "sources": [
+        "deploy/k3s/base/modbus-simulator/deployment.yaml"
+      ]
+    },
+    {
+      "id": "s7-simulator",
+      "group": "v1",
+      "deployment": "s7-simulator",
+      "sources": [
+        "deploy/k3s/base/s7-simulator/deployment.yaml"
+      ]
+    },
+    {
+      "id": "opcua-data-subscriber",
+      "group": "v2",
+      "deployment": "opcua-data-subscriber",
+      "sources": [
+        "deploy/k3s/base/opcua-data-subscriber/deployment.yaml",
+        "services/opcua-data-subscriber/src/opcua_data_subscriber/service.py"
+      ]
+    },
+    {
+      "id": "modbus-data-subscriber",
+      "group": "v2",
+      "deployment": "modbus-data-subscriber",
+      "sources": [
+        "deploy/k3s/base/modbus-data-subscriber/deployment.yaml",
+        "services/modbus-data-subscriber/src/modbus_data_subscriber/service.py"
+      ]
+    },
+    {
+      "id": "s7-data-subscriber",
+      "group": "v2",
+      "deployment": "s7-data-subscriber",
+      "sources": [
+        "deploy/k3s/base/s7-data-subscriber/deployment.yaml",
+        "services/s7-data-subscriber/src/s7_data_subscriber/service.py"
+      ]
+    },
+    {
+      "id": "data-converter",
+      "group": "v2",
+      "deployment": "data-converter",
+      "sources": [
+        "deploy/k3s/base/data-converter/deployment.yaml",
+        "services/data-converter/src/data_converter/service.py"
+      ]
+    },
+    {
+      "id": "uns-auto-contextualizer",
+      "group": "v2",
+      "deployment": "uns-auto-contextualizer",
+      "sources": [
+        "deploy/k3s/base/uns-auto-contextualizer/deployment.yaml",
+        "services/uns-auto-contextualizer/src/uns_auto_contextualizer/service.py"
+      ]
+    },
+    {
+      "id": "uns-contextualizer-orchestrator",
+      "group": "v2",
+      "deployment": "uns-contextualizer-orchestrator",
+      "sources": [
+        "deploy/k3s/base/uns-contextualizer-orchestrator/deployment.yaml",
+        "services/uns-contextualizer-orchestrator/src/uns_contextualizer_orchestrator/service.py"
+      ]
+    },
+    {
+      "id": "mqtt-uns-publisher",
+      "group": "v3",
+      "deployment": "mqtt-uns-publisher",
+      "sources": [
+        "deploy/k3s/base/mqtt-uns-publisher/deployment.yaml",
+        "services/mqtt-uns-publisher/src/mqtt_uns_publisher/service.py"
+      ]
+    },
+    {
+      "id": "mosquitto",
+      "group": "v3",
+      "deployment": "mosquitto",
+      "sources": [
+        "deploy/k3s/base/mosquitto/deployment.yaml"
+      ]
+    },
+    {
+      "id": "rabbitmq",
+      "group": "v3",
+      "deployment": "rabbitmq",
+      "sources": [
+        "deploy/k3s/base/rabbitmq/deployment.yaml"
+      ]
+    },
+    {
+      "id": "amqp-actuation-event-subscriber",
+      "group": "v3",
+      "deployment": "amqp-actuation-event-subscriber",
+      "sources": [
+        "deploy/k3s/base/amqp-actuation-event-subscriber/deployment.yaml",
+        "services/amqp-actuation-event-subscriber/src/amqp_actuation_event_subscriber/service.py"
+      ]
+    },
+    {
+      "id": "decision-agent-stub",
+      "group": "v4",
+      "deployment": "decision-agent-stub",
+      "sources": [
+        "deploy/k3s/base/decision-agent-stub/deployment.yaml",
+        "services/decision-agent-stub/src/decision_agent_stub/service.py"
+      ]
+    },
+    {
+      "id": "actuation-control-orchestrator",
+      "group": "v5",
+      "deployment": "actuation-control-orchestrator",
+      "sources": [
+        "deploy/k3s/base/actuation-control-orchestrator/deployment.yaml",
+        "services/actuation-control-orchestrator/src/actuation_control_orchestrator/service.py"
+      ]
+    },
+    {
+      "id": "actuation-event-validator",
+      "group": "v5",
+      "deployment": "actuation-event-validator",
+      "sources": [
+        "deploy/k3s/base/actuation-event-validator/deployment.yaml",
+        "services/actuation-event-validator/src/actuation_event_validator/service.py"
+      ]
+    },
+    {
+      "id": "actuation-signal-publisher",
+      "group": "v5",
+      "deployment": "actuation-signal-publisher",
+      "sources": [
+        "deploy/k3s/base/actuation-signal-publisher/deployment.yaml",
+        "services/actuation-signal-publisher/src/actuation_signal_publisher/service.py"
+      ]
+    },
+    {
+      "id": "prometheus",
+      "group": "v6",
+      "deployment": "prometheus",
+      "sources": [
+        "deploy/k3s/base/prometheus/deployment.yaml"
+      ]
+    },
+    {
+      "id": "grafana",
+      "group": "v6",
+      "deployment": "grafana",
+      "sources": [
+        "deploy/k3s/base/grafana/deployment.yaml"
+      ]
+    },
+    {
+      "id": "kube-state-metrics",
+      "group": "v6",
+      "deployment": "kube-state-metrics",
+      "sources": [
+        "deploy/k3s/base/kube-state-metrics/deployment.yaml"
+      ]
+    },
+    {
+      "id": "nats",
+      "group": "infrastructure",
+      "deployment": "nats",
+      "sources": [
+        "deploy/k3s/base/nats/deployment.yaml"
+      ]
+    },
+    {
+      "id": "manual-control",
+      "group": "v4",
+      "sources": [
+        "scripts/control.py"
+      ]
+    },
+    {
+      "id": "disturbance-driver",
+      "group": "v4",
+      "sources": [
+        "scripts/disturbance.py"
+      ],
+      "note": "Changes conveyor mode by command; injects cooling directly as experiment stimulus, not admitted production actuation."
+    }
+  ],
+  "vertices": [
+    {
+      "id": "opcua-physical",
+      "roles": [
+        "physical"
+      ],
+      "components": [
+        "opcua-simulator"
+      ]
+    },
+    {
+      "id": "opcua-adapter",
+      "roles": [
+        "adapter"
+      ],
+      "components": [
+        "opcua-data-subscriber"
+      ]
+    },
+    {
+      "id": "modbus-physical",
+      "roles": [
+        "physical"
+      ],
+      "components": [
+        "modbus-simulator"
+      ]
+    },
+    {
+      "id": "modbus-adapter",
+      "roles": [
+        "adapter"
+      ],
+      "components": [
+        "modbus-data-subscriber"
+      ]
+    },
+    {
+      "id": "s7-physical",
+      "roles": [
+        "physical"
+      ],
+      "components": [
+        "s7-simulator"
+      ]
+    },
+    {
+      "id": "s7-adapter",
+      "roles": [
+        "adapter"
+      ],
+      "components": [
+        "s7-data-subscriber"
+      ]
+    },
+    {
+      "id": "integration",
+      "roles": [
+        "contextualizer"
+      ],
+      "components": [
+        "uns-contextualizer-orchestrator",
+        "data-converter",
+        "uns-auto-contextualizer"
+      ]
+    },
+    {
+      "id": "state-namespace",
+      "roles": [
+        "namespace"
+      ],
+      "components": [
+        "mqtt-uns-publisher",
+        "mosquitto"
+      ]
+    },
+    {
+      "id": "decision",
+      "roles": [
+        "consumer",
+        "decision"
+      ],
+      "components": [
+        "decision-agent-stub"
+      ]
+    },
+    {
+      "id": "manual-decision",
+      "roles": [
+        "consumer",
+        "decision"
+      ],
+      "components": [
+        "manual-control"
+      ]
+    },
+    {
+      "id": "command-namespace",
+      "roles": [
+        "namespace"
+      ],
+      "components": [
+        "rabbitmq",
+        "amqp-actuation-event-subscriber"
+      ]
+    },
+    {
+      "id": "admission",
+      "roles": [
+        "executor"
+      ],
+      "components": [
+        "actuation-control-orchestrator",
+        "actuation-event-validator"
+      ]
+    },
+    {
+      "id": "writer",
+      "roles": [
+        "executor"
+      ],
+      "components": [
+        "actuation-signal-publisher"
+      ]
+    },
+    {
+      "id": "outcome-namespace",
+      "roles": [
+        "namespace"
+      ],
+      "components": [
+        "rabbitmq"
+      ]
+    },
+    {
+      "id": "observer",
+      "roles": [
+        "observer"
+      ],
+      "components": [
+        "prometheus",
+        "grafana",
+        "kube-state-metrics"
+      ]
+    }
+  ],
+  "contracts": [
+    {
+      "id": "native-state",
+      "kind": "industrial_state",
+      "model": "Protocol-specific measurement",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
+      ],
+      "note": "Native acquisition excluded from required UNS mediation; no shared wire version asserted."
+    },
+    {
+      "id": "raw-state",
+      "kind": "industrial_state",
+      "model": "RawSignalEnvelope",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
+      ],
+      "note": "Full semantic and delivery policy binding remains incomplete."
+    },
+    {
+      "id": "canonical-state",
+      "kind": "industrial_state",
+      "model": "SOSAObservation",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/sosa.py"
+      ],
+      "note": "Version not present on SOSA wire; catalogue binding and receiver compatibility remain to be fixed."
+    },
+    {
+      "id": "inspection",
+      "kind": "event",
+      "model": "BottleInspection",
+      "wire_version": "1.0",
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py"
+      ],
+      "note": "Full semantic and delivery policy binding remains incomplete."
+    },
+    {
+      "id": "actuation-request",
+      "kind": "command",
+      "model": "ActuationRequest",
+      "wire_version": "1.0",
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/actuation.py"
+      ],
+      "note": "Full semantic and delivery policy binding remains incomplete."
+    },
+    {
+      "id": "actuation-outcome",
+      "kind": "event",
+      "model": "ActuationApproveResult | ActuationRejectResult",
+      "wire_version": "1.0",
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/actuation.py"
+      ],
+      "note": "Full semantic and delivery policy binding remains incomplete."
+    },
+    {
+      "id": "native-write",
+      "kind": "command",
+      "model": "Native target operation",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "config/native-actuation-targets.yaml"
+      ],
+      "note": "Physical write binding also uses OPC UA mapping. No trusted pre-write approval is carried here today."
+    },
+    {
+      "id": "observations",
+      "kind": "operational_telemetry",
+      "model": "Prometheus metrics and structured logs",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "deploy/k3s/base/prometheus/configmap.yaml"
+      ],
+      "note": "This edge describes observation responsibility. Metrics are scraped, logs currently remain separately available; complete correlated execution traces are missing."
+    },
+    {
+      "id": "native-inspection",
+      "kind": "event",
+      "model": "Ten-register inspection snapshot",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-controls/src/eirvah_controls/inspection.py"
+      ],
+      "note": "A refinement binding is documented here; complete receiver compatibility and policy checks remain pending."
+    },
+    {
+      "id": "raw-inspection",
+      "kind": "event",
+      "model": "BottleInspection JSON string inside RawSignalEnvelope",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
+      ],
+      "note": "A refinement binding is documented here; complete receiver compatibility and policy checks remain pending."
+    }
+  ],
+  "channels": [
+    {
+      "id": "opcua-read",
+      "transport": "opcua",
+      "address": "opcua-simulator:4840",
+      "components": [
+        "opcua-simulator",
+        "opcua-data-subscriber"
+      ],
+      "sources": [
+        "deploy/k3s/base/opcua-data-subscriber/deployment.yaml"
+      ]
+    },
+    {
+      "id": "opcua-write",
+      "transport": "opcua",
+      "address": "opcua-simulator:4840",
+      "components": [
+        "actuation-signal-publisher",
+        "opcua-simulator"
+      ],
+      "sources": [
+        "config/native-actuation-targets.yaml",
+        "config/opcua-node-to-uns-mapping.yaml"
+      ]
+    },
+    {
+      "id": "modbus-read",
+      "transport": "modbus",
+      "address": "modbus-simulator:5020",
+      "components": [
+        "modbus-simulator",
+        "modbus-data-subscriber"
+      ],
+      "sources": [
+        "deploy/k3s/base/modbus-data-subscriber/deployment.yaml"
+      ]
+    },
+    {
+      "id": "modbus-write",
+      "transport": "modbus",
+      "address": "modbus-simulator:5020",
+      "components": [
+        "actuation-signal-publisher",
+        "modbus-simulator"
+      ],
+      "sources": [
+        "config/native-actuation-targets.yaml",
+        "config/opcua-node-to-uns-mapping.yaml"
+      ]
+    },
+    {
+      "id": "s7-read",
+      "transport": "s7",
+      "address": "s7-simulator:102",
+      "components": [
+        "s7-simulator",
+        "s7-data-subscriber"
+      ],
+      "sources": [
+        "deploy/k3s/base/s7-data-subscriber/deployment.yaml"
+      ]
+    },
+    {
+      "id": "s7-write",
+      "transport": "s7",
+      "address": "s7-simulator:102",
+      "components": [
+        "actuation-signal-publisher",
+        "s7-simulator"
+      ],
+      "sources": [
+        "config/native-actuation-targets.yaml",
+        "config/opcua-node-to-uns-mapping.yaml"
+      ]
+    },
+    {
+      "id": "raw-ingress",
+      "transport": "nats",
+      "address": "uns.ingress.raw",
+      "components": [
+        "opcua-data-subscriber",
+        "modbus-data-subscriber",
+        "s7-data-subscriber",
+        "uns-contextualizer-orchestrator"
+      ],
+      "sources": [
+        "services/uns-contextualizer-orchestrator/src/uns_contextualizer_orchestrator/service.py"
+      ],
+      "envelope": "NATSEnvelope with RawSignalEnvelope"
+    },
+    {
+      "id": "convert",
+      "transport": "nats_request_reply",
+      "address": "uns.work.convert",
+      "components": [
+        "uns-contextualizer-orchestrator",
+        "data-converter"
+      ],
+      "sources": [
+        "deploy/k3s/base/uns-contextualizer-orchestrator/uns-contextualizer.yaml",
+        "services/data-converter/src/data_converter/service.py"
+      ],
+      "request": "RawSignalEnvelope",
+      "response": "NormalizedSignalEnvelope"
+    },
+    {
+      "id": "contextualize",
+      "transport": "nats_request_reply",
+      "address": "uns.work.contextualize",
+      "components": [
+        "uns-contextualizer-orchestrator",
+        "uns-auto-contextualizer"
+      ],
+      "sources": [
+        "deploy/k3s/base/uns-contextualizer-orchestrator/uns-contextualizer.yaml",
+        "services/uns-auto-contextualizer/src/uns_auto_contextualizer/service.py"
+      ],
+      "request": "NormalizedSignalEnvelope",
+      "response": "ContextualizeResult"
+    },
+    {
+      "id": "publish",
+      "transport": "nats_request_reply",
+      "address": "uns.work.publish",
+      "components": [
+        "uns-contextualizer-orchestrator",
+        "mqtt-uns-publisher"
+      ],
+      "sources": [
+        "deploy/k3s/base/uns-contextualizer-orchestrator/uns-contextualizer.yaml",
+        "services/mqtt-uns-publisher/src/mqtt_uns_publisher/service.py"
+      ],
+      "request": "PublishRequest",
+      "response": "NATSEnvelope status"
+    },
+    {
+      "id": "mqtt-state",
+      "transport": "mqtt",
+      "address": "UNS seven-level topic from ontology",
+      "components": [
+        "mqtt-uns-publisher",
+        "mosquitto",
+        "decision-agent-stub"
+      ],
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/sosa.py",
+        "config/eirvah-line-a.jsonld",
+        "services/mqtt-uns-publisher/src/mqtt_uns_publisher/service.py"
+      ],
+      "envelope": "SOSAObservation JSON-LD; inspection value is a JSON string containing BottleInspection"
+    },
+    {
+      "id": "amqp-request",
+      "transport": "amqp",
+      "address": "eirvah.actuation.requests",
+      "components": [
+        "decision-agent-stub",
+        "manual-control",
+        "rabbitmq",
+        "amqp-actuation-event-subscriber"
+      ],
+      "sources": [
+        "services/amqp-actuation-event-subscriber/src/amqp_actuation_event_subscriber/service.py",
+        "scripts/control.py"
+      ],
+      "envelope": "ActuationRequest",
+      "address_kind": "queue via default exchange"
+    },
+    {
+      "id": "actuation-ingress",
+      "transport": "nats",
+      "address": "act.ingress.requested",
+      "components": [
+        "amqp-actuation-event-subscriber",
+        "actuation-control-orchestrator"
+      ],
+      "sources": [
+        "services/amqp-actuation-event-subscriber/src/amqp_actuation_event_subscriber/service.py"
+      ],
+      "envelope": "NATSEnvelope with ActuationRequest"
+    },
+    {
+      "id": "validate",
+      "transport": "nats_request_reply",
+      "address": "act.work.validate",
+      "components": [
+        "actuation-control-orchestrator",
+        "actuation-event-validator"
+      ],
+      "sources": [
+        "deploy/k3s/base/actuation-control-orchestrator/actuation-control.yaml",
+        "services/actuation-event-validator/src/actuation_event_validator/service.py"
+      ],
+      "request": "ActuationRequest inside NATSEnvelope",
+      "response": "ValidationResult"
+    },
+    {
+      "id": "write",
+      "transport": "nats_request_reply",
+      "address": "act.work.write_signal",
+      "components": [
+        "actuation-control-orchestrator",
+        "actuation-signal-publisher"
+      ],
+      "sources": [
+        "deploy/k3s/base/actuation-control-orchestrator/actuation-control.yaml",
+        "services/actuation-signal-publisher/src/actuation_signal_publisher/service.py"
+      ],
+      "request": "ActuationRequest inside NATSEnvelope",
+      "response": "NATSEnvelope status"
+    },
+    {
+      "id": "amqp-outcome",
+      "transport": "amqp",
+      "address": "eirvah.actuation.results",
+      "components": [
+        "actuation-control-orchestrator",
+        "rabbitmq",
+        "decision-agent-stub",
+        "manual-control"
+      ],
+      "sources": [
+        "services/actuation-control-orchestrator/src/actuation_control_orchestrator/pipeline.py",
+        "services/decision-agent-stub/src/decision_agent_stub/service.py"
+      ],
+      "routing_key": "actuation.result",
+      "envelope": "ActuationApproveResult or ActuationRejectResult",
+      "note": "Approve is emitted after writer reply; it is not a bound pre-write approval."
+    },
+    {
+      "id": "metrics",
+      "transport": "http_scrape",
+      "address": "/metrics",
+      "components": [
+        "prometheus"
+      ],
+      "sources": [
+        "deploy/k3s/base/prometheus/configmap.yaml"
+      ],
+      "note": "Scrape direction is observer to endpoint; logical observation flow is emitter to observer. Endpoint coverage is configured separately."
+    },
+    {
+      "id": "logs",
+      "transport": "structured_log",
+      "address": "stdout",
+      "components": [
+        "opcua-simulator",
+        "modbus-simulator",
+        "s7-simulator",
+        "opcua-data-subscriber",
+        "modbus-data-subscriber",
+        "s7-data-subscriber",
+        "data-converter",
+        "uns-auto-contextualizer",
+        "uns-contextualizer-orchestrator",
+        "mqtt-uns-publisher",
+        "mosquitto",
+        "rabbitmq",
+        "amqp-actuation-event-subscriber",
+        "decision-agent-stub",
+        "actuation-control-orchestrator",
+        "actuation-event-validator",
+        "actuation-signal-publisher",
+        "prometheus",
+        "grafana",
+        "kube-state-metrics",
+        "nats"
+      ],
+      "sources": [
+        "libs/eirvah-observability/src/eirvah_observability/logging.py"
+      ],
+      "note": "Available component logs; centralized collection and complete timed trace are not claimed."
+    }
+  ],
+  "edges": [
+    {
+      "id": "opcua-acquire",
+      "source": "opcua-physical",
+      "target": "opcua-adapter",
+      "flow": "industrial_state",
+      "contract": "native-state",
+      "channels": [
+        "opcua-read"
+      ],
+      "boundary": "native_acquisition"
+    },
+    {
+      "id": "opcua-integrate",
+      "source": "opcua-adapter",
+      "target": "integration",
+      "flow": "industrial_state",
+      "contract": "raw-state",
+      "channels": [
+        "raw-ingress"
+      ]
+    },
+    {
+      "id": "modbus-acquire",
+      "source": "modbus-physical",
+      "target": "modbus-adapter",
+      "flow": "industrial_state",
+      "contract": "native-state",
+      "channels": [
+        "modbus-read"
+      ],
+      "boundary": "native_acquisition"
+    },
+    {
+      "id": "modbus-integrate",
+      "source": "modbus-adapter",
+      "target": "integration",
+      "flow": "industrial_state",
+      "contract": "raw-state",
+      "channels": [
+        "raw-ingress"
+      ]
+    },
+    {
+      "id": "s7-acquire",
+      "source": "s7-physical",
+      "target": "s7-adapter",
+      "flow": "industrial_state",
+      "contract": "native-state",
+      "channels": [
+        "s7-read"
+      ],
+      "boundary": "native_acquisition"
+    },
+    {
+      "id": "s7-integrate",
+      "source": "s7-adapter",
+      "target": "integration",
+      "flow": "industrial_state",
+      "contract": "raw-state",
+      "channels": [
+        "raw-ingress"
+      ]
+    },
+    {
+      "id": "contextualize-state",
+      "source": "integration",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "contract": "canonical-state",
+      "channels": [
+        "convert",
+        "contextualize",
+        "publish",
+        "mqtt-state"
+      ]
+    },
+    {
+      "id": "consume-state",
+      "source": "state-namespace",
+      "target": "decision",
+      "flow": "industrial_state",
+      "contract": "canonical-state",
+      "channels": [
+        "mqtt-state"
+      ],
+      "topic_filter": [
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+        "uniza/zilina/factory1/line_a/reject_station/rejector_01/last_rejected_bottle",
+        "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count"
+      ]
+    },
+    {
+      "id": "inspection-acquire",
+      "source": "modbus-physical",
+      "target": "modbus-adapter",
+      "flow": "event",
+      "contract": "native-inspection",
+      "channels": [
+        "modbus-read"
+      ],
+      "boundary": "native_acquisition",
+      "note": "Contract realized as a register snapshot before decoding; event is sampled, not durably queued."
+    },
+    {
+      "id": "inspection-integrate",
+      "source": "modbus-adapter",
+      "target": "integration",
+      "flow": "event",
+      "contract": "raw-inspection",
+      "channels": [
+        "raw-ingress"
+      ]
+    },
+    {
+      "id": "inspection-publish",
+      "source": "integration",
+      "target": "state-namespace",
+      "flow": "event",
+      "contract": "inspection",
+      "channels": [
+        "convert",
+        "contextualize",
+        "publish",
+        "mqtt-state"
+      ]
+    },
+    {
+      "id": "inspection-consume",
+      "source": "state-namespace",
+      "target": "decision",
+      "flow": "event",
+      "contract": "inspection",
+      "channels": [
+        "mqtt-state"
+      ],
+      "topic_filter": [
+        "uniza/zilina/factory1/line_a/inspector/inspector_01/bottle_inspection"
+      ]
+    },
+    {
+      "id": "decision-request",
+      "source": "decision",
+      "target": "command-namespace",
+      "flow": "command",
+      "contract": "actuation-request",
+      "channels": [
+        "amqp-request"
+      ]
+    },
+    {
+      "id": "manual-decision-request",
+      "source": "manual-decision",
+      "target": "command-namespace",
+      "flow": "command",
+      "contract": "actuation-request",
+      "channels": [
+        "amqp-request"
+      ]
+    },
+    {
+      "id": "admit-command",
+      "source": "command-namespace",
+      "target": "admission",
+      "flow": "command",
+      "contract": "actuation-request",
+      "channels": [
+        "actuation-ingress",
+        "validate"
+      ]
+    },
+    {
+      "id": "coordinate-write",
+      "source": "admission",
+      "target": "writer",
+      "flow": "command",
+      "contract": "actuation-request",
+      "channels": [
+        "write"
+      ],
+      "boundary": "internal_v5_handoff",
+      "note": "Current message is the original request; bound admission evidence is missing."
+    },
+    {
+      "id": "opcua-execute",
+      "source": "writer",
+      "target": "opcua-physical",
+      "flow": "command",
+      "contract": "native-write",
+      "channels": [
+        "opcua-write"
+      ],
+      "boundary": "native_write"
+    },
+    {
+      "id": "modbus-execute",
+      "source": "writer",
+      "target": "modbus-physical",
+      "flow": "command",
+      "contract": "native-write",
+      "channels": [
+        "modbus-write"
+      ],
+      "boundary": "native_write"
+    },
+    {
+      "id": "s7-execute",
+      "source": "writer",
+      "target": "s7-physical",
+      "flow": "command",
+      "contract": "native-write",
+      "channels": [
+        "s7-write"
+      ],
+      "boundary": "native_write"
+    },
+    {
+      "id": "publish-outcome",
+      "source": "admission",
+      "target": "outcome-namespace",
+      "flow": "event",
+      "contract": "actuation-outcome",
+      "channels": [
+        "amqp-outcome"
+      ]
+    },
+    {
+      "id": "decision-outcome",
+      "source": "outcome-namespace",
+      "target": "decision",
+      "flow": "event",
+      "contract": "actuation-outcome",
+      "channels": [
+        "amqp-outcome"
+      ]
+    },
+    {
+      "id": "manual-decision-outcome",
+      "source": "outcome-namespace",
+      "target": "manual-decision",
+      "flow": "event",
+      "contract": "actuation-outcome",
+      "channels": [
+        "amqp-outcome"
+      ]
+    },
+    {
+      "id": "opcua-physical-observe",
+      "source": "opcua-physical",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "opcua-adapter-observe",
+      "source": "opcua-adapter",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "modbus-physical-observe",
+      "source": "modbus-physical",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "modbus-adapter-observe",
+      "source": "modbus-adapter",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "s7-physical-observe",
+      "source": "s7-physical",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "s7-adapter-observe",
+      "source": "s7-adapter",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "integration-observe",
+      "source": "integration",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "state-namespace-observe",
+      "source": "state-namespace",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "decision-observe",
+      "source": "decision",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "manual-decision-observe",
+      "source": "manual-decision",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "command-namespace-observe",
+      "source": "command-namespace",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "admission-observe",
+      "source": "admission",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "writer-observe",
+      "source": "writer",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "outcome-namespace-observe",
+      "source": "outcome-namespace",
+      "target": "observer",
+      "flow": "operational_telemetry",
+      "contract": "observations",
+      "channels": [
+        "metrics",
+        "logs"
+      ],
+      "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    }
+  ],
+  "controls": [
+    {
+      "id": "temperature",
+      "protocol": "opcua",
+      "physical_component": "opcua-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature"
+      ]
+    },
+    {
+      "id": "conveyor",
+      "protocol": "modbus",
+      "physical_component": "modbus-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/run",
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/reset_fault"
+      ]
+    },
+    {
+      "id": "filler",
+      "protocol": "modbus",
+      "physical_component": "modbus-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/filler/valve_01/open"
+      ]
+    },
+    {
+      "id": "capper",
+      "protocol": "s7",
+      "physical_component": "s7-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/capper/motor_01/run",
+        "uniza/zilina/factory1/line_a/capper/motor_01/speed_setpoint",
+        "uniza/zilina/factory1/line_a/capper/motor_01/reset_fault"
+      ]
+    },
+    {
+      "id": "reject",
+      "protocol": "modbus",
+      "physical_component": "modbus-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/reject_station/rejector_01/reject_bottle"
+      ]
+    }
+  ],
+  "required_routes": [
+    {
+      "id": "decision-opcua",
+      "source": "decision",
+      "target": "opcua-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "decision-modbus",
+      "source": "decision",
+      "target": "modbus-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "decision-s7",
+      "source": "decision",
+      "target": "s7-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "manual-decision-opcua",
+      "source": "manual-decision",
+      "target": "opcua-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "manual-decision-modbus",
+      "source": "manual-decision",
+      "target": "modbus-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "manual-decision-s7",
+      "source": "manual-decision",
+      "target": "s7-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "inspection-event",
+      "source": "modbus-physical",
+      "target": "decision",
+      "flow": "event",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "opcua-publication",
+      "source": "opcua-physical",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "modbus-publication",
+      "source": "modbus-physical",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "s7-publication",
+      "source": "s7-physical",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "selected-state-consumption",
+      "source": "modbus-physical",
+      "target": "decision",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ],
+      "scope": "Only the three explicit state topic filters on consume-state. No OPC UA or S7 subscription by this controller is asserted."
+    }
+  ],
+  "pipelines": [
+    {
+      "source": "deploy/k3s/base/uns-contextualizer-orchestrator/uns-contextualizer.yaml",
+      "stages": [
+        {
+          "stage": "convert",
+          "channel": "convert"
+        },
+        {
+          "stage": "contextualize",
+          "channel": "contextualize"
+        },
+        {
+          "stage": "publish",
+          "channel": "publish"
+        }
+      ],
+      "dlq_subject": "uns.dlq.telemetry"
+    },
+    {
+      "source": "deploy/k3s/base/actuation-control-orchestrator/actuation-control.yaml",
+      "stages": [
+        {
+          "stage": "validate",
+          "channel": "validate"
+        },
+        {
+          "stage": "write_signal",
+          "channel": "write"
+        }
+      ],
+      "dlq_subject": "act.dlq.rejected"
+    }
+  ],
+  "placement": {
+    "status": "documented_baseline_not_live_verified",
+    "context": "kind-eirvah-edge",
+    "namespace": "eirvah-edge",
+    "host_set": [
+      "local-kind"
+    ],
+    "component_hosts": {
+      "opcua-simulator": [
+        "local-kind"
+      ],
+      "modbus-simulator": [
+        "local-kind"
+      ],
+      "s7-simulator": [
+        "local-kind"
+      ],
+      "opcua-data-subscriber": [
+        "local-kind"
+      ],
+      "modbus-data-subscriber": [
+        "local-kind"
+      ],
+      "s7-data-subscriber": [
+        "local-kind"
+      ],
+      "data-converter": [
+        "local-kind"
+      ],
+      "uns-auto-contextualizer": [
+        "local-kind"
+      ],
+      "uns-contextualizer-orchestrator": [
+        "local-kind"
+      ],
+      "mqtt-uns-publisher": [
+        "local-kind"
+      ],
+      "mosquitto": [
+        "local-kind"
+      ],
+      "rabbitmq": [
+        "local-kind"
+      ],
+      "amqp-actuation-event-subscriber": [
+        "local-kind"
+      ],
+      "decision-agent-stub": [
+        "local-kind"
+      ],
+      "actuation-control-orchestrator": [
+        "local-kind"
+      ],
+      "actuation-event-validator": [
+        "local-kind"
+      ],
+      "actuation-signal-publisher": [
+        "local-kind"
+      ],
+      "prometheus": [
+        "local-kind"
+      ],
+      "grafana": [
+        "local-kind"
+      ],
+      "kube-state-metrics": [
+        "local-kind"
+      ],
+      "nats": [
+        "local-kind"
+      ]
+    },
+    "external_drivers": [
+      "manual-control",
+      "disturbance-driver"
+    ],
+    "future": "Expand admission and writer placement to separate cloud and edge hosts; this is not a replica change."
+  },
+  "gaps": [
+    {
+      "id": "approval_binding",
+      "checks": [
+        "C07",
+        "CR5"
+      ],
+      "status": "open",
+      "description": "Writer receives the original request without trusted bound approval or authenticated requester evidence."
+    },
+    {
+      "id": "writer_deadline",
+      "checks": [
+        "C08",
+        "CR5"
+      ],
+      "status": "open",
+      "description": "Deadline is optional and checked at ingress, not immediately before writing."
+    },
+    {
+      "id": "command_recovery",
+      "checks": [
+        "C09",
+        "CR6"
+      ],
+      "status": "open",
+      "description": "No full command-ID immutability, durable executor ledger or declared restart and retention guarantee."
+    },
+    {
+      "id": "outcome_uncertainty",
+      "checks": [
+        "C10",
+        "CR6"
+      ],
+      "status": "open",
+      "description": "Write timeout is emitted as reject although device execution may be unknown; written_at is assigned after writer reply."
+    },
+    {
+      "id": "event_version_binding",
+      "checks": [
+        "C03",
+        "C06",
+        "CR4"
+      ],
+      "status": "open",
+      "description": "Inspection is a versioned JSON string inside unversioned SOSA; event classification and receiver binding are study mappings, not enforced end to end."
+    },
+    {
+      "id": "sampled_events",
+      "checks": [
+        "C06",
+        "CR4"
+      ],
+      "status": "open",
+      "description": "Polling latest inspection registers can miss events; restart clears in-memory deduplication."
+    },
+    {
+      "id": "trace_coverage",
+      "checks": [
+        "C12",
+        "CR8"
+      ],
+      "status": "open",
+      "description": "Metrics and logs do not form a complete attributable timed execution trace."
+    },
+    {
+      "id": "distributed_placement",
+      "checks": [
+        "C13"
+      ],
+      "status": "open",
+      "description": "One local cluster is the documented baseline; cloud admission and edge writing are not yet separated."
+    },
+    {
+      "id": "manifest_boundary",
+      "checks": [
+        "C01",
+        "C02"
+      ],
+      "status": "open",
+      "description": "The declared graph is not a security boundary or proof that unlisted runtime connections cannot occur."
+    }
+  ],
+  "mapping_status": "initial_source_mapping",
+  "scenarios": [
+    {
+      "id": "warmer-production-mode",
+      "input": "Modbus conveyor speed setpoint via MQTT",
+      "decision": "Fixed normal/high production-mode rule",
+      "target": "temperature",
+      "route": "decision-opcua",
+      "feedback": "OPC UA warmer state published to MQTT and simulator metrics; not subscribed by this decision rule."
+    },
+    {
+      "id": "automatic-rejection",
+      "input": "Modbus inspection event plus rejection counter and bottle feedback",
+      "decision": "Fresh failed inspection triggers one rejection request within in-memory policy",
+      "target": "reject",
+      "route": "decision-modbus",
+      "feedback": "AMQP result plus MQTT last rejected bottle and counter"
+    },
+    {
+      "id": "manual-temperature",
+      "input": "scripts/control.py",
+      "target": "temperature",
+      "route": "manual-decision-opcua",
+      "feedback": "AMQP outcome; process state is independently published, not automatically verified by control.py."
+    },
+    {
+      "id": "manual-conveyor",
+      "input": "scripts/control.py",
+      "target": "conveyor",
+      "route": "manual-decision-modbus",
+      "feedback": "AMQP outcome; process state is independently published, not automatically verified by control.py."
+    },
+    {
+      "id": "manual-filler",
+      "input": "scripts/control.py",
+      "target": "filler",
+      "route": "manual-decision-modbus",
+      "feedback": "AMQP outcome; process state is independently published, not automatically verified by control.py."
+    },
+    {
+      "id": "manual-capper",
+      "input": "scripts/control.py",
+      "target": "capper",
+      "route": "manual-decision-s7",
+      "feedback": "AMQP outcome; process state is independently published, not automatically verified by control.py."
+    },
+    {
+      "id": "manual-reject",
+      "input": "scripts/control.py",
+      "target": "reject",
+      "route": "manual-decision-modbus",
+      "feedback": "AMQP outcome; process state is independently published, not automatically verified by control.py."
+    }
+  ],
+  "namespace_bindings": {
+    "status": "partial",
+    "path_syntax": "libs/eirvah-contracts/src/eirvah_contracts/uns.py",
+    "industrial_descriptions": "config/eirvah-line-a.jsonld",
+    "native_command_bindings": [
+      "config/native-actuation-targets.yaml",
+      "config/opcua-node-to-uns-mapping.yaml",
+      "config/opcua-node-list.yaml"
+    ],
+    "admission_policy": "deploy/k3s/base/actuation-event-validator/actuation-policy.yaml",
+    "selected_command_contract": "actuation-request",
+    "selected_inspection_topic": "uniza/zilina/factory1/line_a/inspector/inspector_01/bottle_inspection",
+    "limitations": "Valid topic syntax and ontology lookups do not establish complete identity, description and contract conformance. Seven selected scenario mappings are documented, not runtime verified by this manifest."
+  },
+  "excluded_connections": [
+    {
+      "id": "cooling-injection",
+      "source": "disturbance-driver",
+      "target": "opcua-physical",
+      "purpose": "Test stimulus outside normal command admission",
+      "source_file": "scripts/disturbance.py"
+    },
+    {
+      "id": "manual-fault-injection",
+      "purpose": "Direct simulator writes used to create fault test conditions; outside admitted production command routes."
+    },
+    {
+      "id": "administrative-access",
+      "purpose": "kubectl exec, port forwards and direct broker/device access are outside the permitted business graph; this manifest does not deny such access."
+    }
+  ]
+}
