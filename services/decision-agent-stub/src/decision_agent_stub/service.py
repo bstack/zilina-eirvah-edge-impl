@@ -13,6 +13,7 @@ import structlog
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.inspection import BottleInspection
 from eirvah_contracts.ulid import generate_correlation_id
+from eirvah_observability.execution import record_command
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter
 
@@ -181,6 +182,7 @@ class DecisionAgentRuntime:
                         )
                         if request is None:
                             continue
+                        record_command("decision-agent-stub", "request_submitting", request)
                         await commands.publish(
                             aio_pika.Message(
                                 body=request.model_dump_json().encode(),
@@ -189,6 +191,7 @@ class DecisionAgentRuntime:
                             ),
                             routing_key=self._settings.amqp_queue,
                         )
+                        record_command("decision-agent-stub", "request_published", request)
                         reason = (
                             "failed_inspection"
                             if request.value_type == "int64"

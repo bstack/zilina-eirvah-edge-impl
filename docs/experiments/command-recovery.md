@@ -76,3 +76,5 @@ Deployed to `kind-eirvah-edge` / `eirvah-edge`. Thirteen live checks passed acro
 Recovery boundary cases used explicitly seeded `preparing` and `started` ledger records. They verify restart policy; they do not constitute an observed crash during a physical write. The started fixture remained unknown without execution, while the preparing fixture executed once. Actuator settings and the automatic producer were restored, with all 21 pods Ready. The read-only storage fixture cleanup was corrected after an initial failed run left a SQLite sidecar read-only; the repeated run passed.
 
 Local evidence: `results/cluster-recovery/2026-11-04T09-11-39Z/summary.json` (gitignored). This rehearsal does not establish formal conformance or exactly-once physical effects.
+
+For correlated lifecycle logging and collection limits, see [execution records](execution-records.md).

@@ -11,6 +11,7 @@ from eirvah_bus.client import BusClient
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.authorization import AuthenticatedRequest, require_key, sign_ingress
 from eirvah_contracts.envelope import NATSEnvelope
+from eirvah_observability.execution import record_command
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter
@@ -75,6 +76,13 @@ class AmqpSubscriberRuntime:
                             self._handled.labels(outcome="unauthorized_or_invalid").inc()
                             _log.warning("command_ingress_refused")
                             continue
+                        admitted = AuthenticatedRequest.model_validate(envelope.payload).command
+                        record_command(
+                            "amqp-actuation-event-subscriber",
+                            "request_received",
+                            admitted,
+                            identity_source="broker_user_id",
+                        )
                         await bus.nc.publish(
                             NATS_SUBJECT,
                             envelope.model_dump_json().encode(),

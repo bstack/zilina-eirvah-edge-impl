@@ -23,6 +23,7 @@ from eirvah_contracts.authorization import (
     verify_evidence,
 )
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
+from eirvah_observability.execution import record_command
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter
@@ -150,6 +151,7 @@ class SignalPublisherWorker:
     async def _handle(self, msg: Msg) -> None:
         correlation_id = "UNKNOWN"
         token: str | None = None
+        req = None
         try:
             envelope = NATSEnvelope.model_validate_json(msg.data)
             correlation_id = envelope.correlation_id
@@ -184,12 +186,30 @@ class SignalPublisherWorker:
                     raise RuntimeError("command claim could not be established") from exc
                 token, result = claim.token, claim.result
                 if token is not None:
+                    record_command(
+                        "actuation-signal-publisher",
+                        "executor_admitted",
+                        req,
+                        attempt_id=token,
+                        approval_issued_at=approved.approval.issued_at.isoformat(),
+                    )
+                    initiated = False
 
                     def before_write() -> None:
+                        nonlocal initiated
                         verify_evidence(
                             req, approved.approval, key, "approval", self._settings.writer_id
                         )
                         ledger.mark_started(correlation_id, token)
+                        if not initiated:
+                            record_command(
+                                "actuation-signal-publisher",
+                                "write_initiated",
+                                req,
+                                attempt_id=token,
+                                evidence_scope="before_first_native_frame",
+                            )
+                            initiated = True
 
                     try:
                         native = self._native_targets.get(req.target_uns_topic)
@@ -205,11 +225,29 @@ class SignalPublisherWorker:
                                 target=target, value=req.requested_value, before_write=before_write
                             )
                     except asyncio.CancelledError:
-                        ledger.fail(correlation_id, token, reason="execution_cancelled")
+                        cancelled = ledger.fail(correlation_id, token, reason="execution_cancelled")
+                        record_command(
+                            "actuation-signal-publisher",
+                            "writer_result",
+                            req,
+                            attempt_id=token,
+                            outcome=cancelled.outcome,
+                            reason=cancelled.reason,
+                            replayed=False,
+                        )
                         raise
                     except Exception as exc:
                         result = ledger.fail(correlation_id, token, reason=type(exc).__name__)
                     else:
+                        record_command(
+                            "actuation-signal-publisher",
+                            "device_acknowledged",
+                            req,
+                            attempt_id=token,
+                            protocol=native.protocol if native is not None else "opcua",
+                            evidence_scope="native_acknowledgement",
+                            process_response="not_established",
+                        )
                         result = ledger.complete(
                             correlation_id, token, written_at=datetime.now(UTC)
                         )
@@ -238,6 +276,17 @@ class SignalPublisherWorker:
                 status="error",
                 payload=result.model_dump(mode="json"),
                 error=EnvelopeError(kind=type(exc).__name__, message=str(exc)[:200]),
+            )
+        if req is not None:
+            record_command(
+                "actuation-signal-publisher",
+                "writer_result",
+                req,
+                attempt_id=token,
+                outcome=result.outcome,
+                reason=result.reason,
+                replayed=result.replayed,
+                written_at=result.written_at.isoformat() if result.written_at else None,
             )
         await msg.respond(reply.model_dump_json().encode())
 

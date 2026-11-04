@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+from datetime import UTC, datetime
 from pathlib import Path
 
 import structlog
@@ -20,6 +21,7 @@ from eirvah_contracts.authorization import (
 )
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
 from eirvah_contracts.signals import SignalValueType
+from eirvah_observability.execution import record_command
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_counter
@@ -143,6 +145,18 @@ class ValidatorWorker:
                     self._settings.approved_writer,
                     allow_expired=True,
                 )
+            record_command(
+                "actuation-event-validator",
+                "validation_decided",
+                req,
+                decision=result.decision,
+                reason=result.reason,
+                approved_writer=self._settings.approved_writer,
+                approval_issued_at=result.approval.issued_at.isoformat()
+                if result.approval
+                else None,
+                expired_lookup_only=req.deadline is not None and datetime.now(UTC) > req.deadline,
+            )
             self._handled.labels(worker="actuation-event-validator", outcome=result.decision).inc()
             reply = NATSEnvelope(
                 correlation_id=correlation_id,

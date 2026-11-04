@@ -9,6 +9,7 @@ from typing import Any
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.inspection import BottleInspection
 from eirvah_contracts.ulid import generate_correlation_id
+from eirvah_observability.execution import record_command
 
 from decision_agent_stub.config import DecisionAgentSettings
 
@@ -79,6 +80,13 @@ class RejectionTracker:
             # Allow feedback collection after the command deadline; never retry automatically.
             deadline = entry.request.deadline or entry.request.requested_at
             if now > deadline + timedelta(seconds=10):
+                record_command(
+                    "decision-agent-stub",
+                    "process_response_unresolved",
+                    entry.request,
+                    inspection_id=entry.inspection.inspection_id,
+                    reason="feedback_timeout",
+                )
                 outcomes.append((entry.inspection.inspection_id, "unknown"))
                 del self.pending[key]
         return outcomes
@@ -96,6 +104,13 @@ class RejectionTracker:
         elif result.get("decision") == "pending":
             return outcomes
         elif result.get("decision") == "unknown":
+            record_command(
+                "decision-agent-stub",
+                "process_response_unresolved",
+                entry.request,
+                inspection_id=entry.inspection.inspection_id,
+                reason="writer_unknown",
+            )
             outcomes.append((entry.inspection.inspection_id, "unknown"))
             del self.pending[key]
         else:
@@ -127,6 +142,18 @@ class RejectionTracker:
                 and bottle[1] >= entry.request.requested_at
                 and count[1] >= entry.request.requested_at
             ):
+                record_command(
+                    "decision-agent-stub",
+                    "process_observed",
+                    entry.request,
+                    inspection_id=entry.inspection.inspection_id,
+                    observed_bottle=bottle[0],
+                    observed_count=count[0],
+                    baseline_count=entry.baseline_count,
+                    bottle_observed_at=bottle[1].isoformat(),
+                    count_observed_at=count[1].isoformat(),
+                    evidence_scope="simulator_feedback",
+                )
                 outcomes.append((entry.inspection.inspection_id, "confirmed"))
                 del self.pending[key]
         return outcomes

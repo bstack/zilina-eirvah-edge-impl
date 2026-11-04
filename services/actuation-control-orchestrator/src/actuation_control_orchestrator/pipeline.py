@@ -20,6 +20,7 @@ from eirvah_contracts.actuation import (
 )
 from eirvah_contracts.authorization import ApprovedWriteRequest, AuthenticatedRequest
 from eirvah_contracts.envelope import NATSEnvelope
+from eirvah_observability.execution import record_command
 from nats.aio.client import Client as NATSClient
 
 from actuation_control_orchestrator.metrics import ActuationMetrics
@@ -53,6 +54,7 @@ async def run_actuation_pipeline(
         return
 
     correlation_id = envelope.correlation_id
+    record_command("actuation-control-orchestrator", "pipeline_received", req)
 
     # Stage: validate
     validate_stage = next((s for s in cfg.stages if s.name == "validate"), None)
@@ -235,6 +237,9 @@ async def _emit_unsettled(
         ),
         routing_key="actuation.result",
     )
+    record_command(
+        "actuation-control-orchestrator", "outcome_published", req, outcome=state, reason=reason
+    )
     _log.warning(
         "actuation_outcome", correlation_id=req.correlation_id, outcome=state, reason=reason
     )
@@ -258,6 +263,14 @@ async def _emit_reject(
         aio_pika.Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
         routing_key="actuation.result",
     )
+    record_command(
+        "actuation-control-orchestrator",
+        "outcome_published",
+        req,
+        outcome="reject",
+        reason=reason,
+        retryable=retryable,
+    )
     _log.info("actuation_rejected", correlation_id=req.correlation_id, reason=reason)
 
 
@@ -278,4 +291,12 @@ async def _emit_approve(
     await exchange.publish(
         aio_pika.Message(body=body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
         routing_key="actuation.result",
+    )
+    record_command(
+        "actuation-control-orchestrator",
+        "outcome_published",
+        req,
+        outcome="approve",
+        replayed=replayed,
+        written_at=written_at.isoformat(),
     )
