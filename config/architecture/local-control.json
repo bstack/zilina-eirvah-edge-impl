@@ -332,7 +332,9 @@
       "deployment": "actuation-signal-publisher",
       "sources": [
         "deploy/k3s/base/actuation-signal-publisher/deployment.yaml",
-        "services/actuation-signal-publisher/src/actuation_signal_publisher/service.py"
+        "services/actuation-signal-publisher/src/actuation_signal_publisher/service.py",
+        "services/actuation-signal-publisher/src/actuation_signal_publisher/ledger.py",
+        "deploy/k3s/base/actuation-signal-publisher/pvc.yaml"
       ]
     },
     {
@@ -588,7 +590,7 @@
     {
       "id": "actuation-outcome",
       "kind": "event",
-      "model": "ActuationApproveResult | ActuationRejectResult",
+      "model": "ActuationApproveResult | ActuationRejectResult | ActuationPendingResult | ActuationUnknownResult",
       "wire_version": "1.0",
       "binding_status": "partial",
       "sources": [
@@ -875,7 +877,7 @@
         "services/actuation-signal-publisher/src/actuation_signal_publisher/service.py"
       ],
       "request": "ApprovedWriteRequest inside NATSEnvelope",
-      "response": "NATSEnvelope status",
+      "response": "NATSEnvelope with WriteResult: completed, not_executed, pending, unknown or conflict",
       "note": "Writer refuses unapproved requests, signature mismatch, wrong writer, altered command or expired approval."
     },
     {
@@ -893,8 +895,8 @@
         "services/decision-agent-stub/src/decision_agent_stub/service.py"
       ],
       "routing_key": "actuation.result",
-      "envelope": "ActuationApproveResult or ActuationRejectResult",
-      "note": "Approve is emitted after writer reply; it is not a bound pre-write approval."
+      "envelope": "ActuationApproveResult, ActuationRejectResult, ActuationPendingResult or ActuationUnknownResult",
+      "note": "Completed replays preserve writer completion time and set replayed=true; pending and unknown do not assert non-execution."
     },
     {
       "id": "metrics",
@@ -1653,8 +1655,8 @@
         "C09",
         "CR6"
       ],
-      "status": "open",
-      "description": "No full command-ID immutability, durable executor ledger or declared restart and retention guarantee."
+      "status": "implemented_pending_cluster_verification",
+      "description": "SQLite ledger on writer PVC binds admitted command IDs to immutable digests, serializes claims and retains lifecycle results. Pre-write recovery may retry while live; started recovery remains unknown. Default retention 24 hours after deadline or latest lifecycle transition. Single writer, surviving volume and correct clocks are assumptions."
     },
     {
       "id": "outcome_uncertainty",
@@ -1662,8 +1664,8 @@
         "C10",
         "CR6"
       ],
-      "status": "open",
-      "description": "Write timeout is emitted as reject although device execution may be unknown; written_at is assigned after writer reply."
+      "status": "implemented_pending_cluster_verification",
+      "description": "Writer returns completed/not_executed/pending/unknown/conflict; orchestrator reports missing writer replies as unknown and preserves retained completion timestamps. Full stage traces and physical outcome reconciliation remain pending."
     },
     {
       "id": "event_version_binding",
@@ -1805,9 +1807,24 @@
     "setup": "scripts/configure_actuation_security.py",
     "trust": "Broker, bridge, validator, writer, Kubernetes administrators and secret provisioning are trusted. Either holder of a given HMAC key can generate that evidence.",
     "limits": [
-      "No replay or at-most-once guarantee yet; repeated valid approval can execute again before expiry.",
+      "Writer ledger prevents repeated execution of the same admitted command ID within its retention policy. Producer-generated new IDs and lost/deleted ledger storage are outside that guarantee.",
       "No TLS provided by this change; current setup assumes protected local network and clocks.",
       "MQTT measurement authenticity and authenticated command outcome reports are not established by approval signing."
+    ]
+  },
+  "execution_policy": {
+    "scope": "Admitted commands reaching the single writer; separate event/business-effect deduplication remains scoped independently.",
+    "storage": "SQLite WAL with synchronous FULL on actuation-command-ledger PVC",
+    "retention_seconds_default": 86400,
+    "restart": "preparing -> retryable, started -> unknown; completed results retained",
+    "expired_retries": "Authenticated expired requests may retrieve retained results only; an expired command never starts or restarts a write.",
+    "same_id_different_payload": "conflict while record retained",
+    "cli": "scripts/control.py --save-command PATH; --retry-command PATH preserves entire original command",
+    "not_claimed": [
+      "Exactly-once physical effect",
+      "High availability across independent writer replicas or ledger copies",
+      "Duplicate protection after losing the ledger volume",
+      "Automatic reconciliation of ambiguous physical outcomes"
     ]
   }
 }

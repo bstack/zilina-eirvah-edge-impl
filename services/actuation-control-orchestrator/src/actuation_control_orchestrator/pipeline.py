@@ -11,9 +11,12 @@ import structlog
 from eirvah_bus.request_reply import RequestTimeout, request_reply
 from eirvah_contracts.actuation import (
     ActuationApproveResult,
+    ActuationPendingResult,
     ActuationRejectResult,
     ActuationRequest,
+    ActuationUnknownResult,
     ValidationResult,
+    WriteResult,
 )
 from eirvah_contracts.authorization import ApprovedWriteRequest, AuthenticatedRequest
 from eirvah_contracts.envelope import NATSEnvelope
@@ -50,12 +53,6 @@ async def run_actuation_pipeline(
         return
 
     correlation_id = envelope.correlation_id
-
-    # Deadline check
-    if req.deadline and datetime.now(UTC) > req.deadline:
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="expired")
-        metrics.inc_rejected(path=_PATH, reason="expired")
-        return
 
     # Stage: validate
     validate_stage = next((s for s in cfg.stages if s.name == "validate"), None)
@@ -149,29 +146,98 @@ async def run_actuation_pipeline(
         )
     except RequestTimeout:
         metrics.inc_stage_timeout(path=_PATH, stage="write_signal")
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason="write_timeout")
-        metrics.inc_rejected(path=_PATH, reason="write_timeout")
-        return
-    except Exception as exc:
-        await _emit_reject(
-            nc, cfg.dlq_subject, amqp_results_exchange, req, reason=type(exc).__name__
+        await _emit_unsettled(
+            amqp_results_exchange, req, metrics, state="unknown", reason="write_timeout"
         )
-        metrics.inc_rejected(path=_PATH, reason=type(exc).__name__)
+        return
+    except Exception:
+        await _emit_unsettled(
+            amqp_results_exchange, req, metrics, state="unknown", reason="write_transport_error"
+        )
         return
 
-    write_env = NATSEnvelope.model_validate_json(write_reply_msg.data)
-    if write_env.status == "error":
-        reason = write_env.error.kind if write_env.error else "WriteError"
-        await _emit_reject(nc, cfg.dlq_subject, amqp_results_exchange, req, reason=reason)
-        metrics.inc_rejected(path=_PATH, reason=reason)
+    try:
+        write_env = NATSEnvelope.model_validate_json(write_reply_msg.data)
+        if write_env.correlation_id != correlation_id:
+            raise ValueError("writer reply identity mismatch")
+        result = WriteResult.model_validate(write_env.payload)
+        if result.outcome == "completed" and (
+            write_env.status != "ok" or result.written_at is None
+        ):
+            raise ValueError("writer completion evidence missing")
+    except Exception:
+        await _emit_unsettled(
+            amqp_results_exchange, req, metrics, state="unknown", reason="bad_write_reply"
+        )
         return
 
-    # Approve
-    elapsed = (datetime.now(UTC) - ingress_at).total_seconds()
-    await _emit_approve(amqp_results_exchange, req)
-    metrics.inc_approved(path=_PATH)
-    metrics.observe_e2e_latency(path=_PATH, seconds=elapsed)
-    _log.info("actuation_approved", correlation_id=correlation_id, latency_s=elapsed)
+    if result.replayed:
+        metrics.inc_replayed(path=_PATH, outcome=result.outcome)
+    if result.outcome in ("unknown", "pending"):
+        await _emit_unsettled(
+            amqp_results_exchange,
+            req,
+            metrics,
+            state=result.outcome,
+            reason=result.reason or result.outcome,
+        )
+    elif result.outcome in ("not_executed", "conflict"):
+        reason = (
+            "command_id_reused"
+            if result.outcome == "conflict"
+            else (result.reason or "writer_refused")
+        )
+        await _emit_reject(
+            nc,
+            cfg.dlq_subject,
+            amqp_results_exchange,
+            req,
+            reason=reason,
+            retryable=result.retryable,
+        )
+        category = "command_conflict" if result.outcome == "conflict" else "pre_write_failure"
+        metrics.inc_rejected(path=_PATH, reason=category)
+    else:
+        assert result.written_at is not None
+        await _emit_approve(
+            amqp_results_exchange, req, written_at=result.written_at, replayed=result.replayed
+        )
+        if not result.replayed:
+            metrics.inc_approved(path=_PATH)
+            metrics.observe_e2e_latency(
+                path=_PATH, seconds=(datetime.now(UTC) - ingress_at).total_seconds()
+            )
+        _log.info("actuation_approved", correlation_id=correlation_id, replayed=result.replayed)
+
+
+async def _emit_unsettled(
+    exchange: aio_pika.abc.AbstractExchange,
+    req: ActuationRequest,
+    metrics: ActuationMetrics,
+    *,
+    state: str,
+    reason: str,
+) -> None:
+    result: ActuationPendingResult | ActuationUnknownResult
+    if state == "pending":
+        result = ActuationPendingResult(
+            **req.model_dump(), decision="pending", outcome_reason=reason
+        )
+        metrics.inc_pending(path=_PATH)
+    else:
+        result = ActuationUnknownResult(
+            **req.model_dump(), decision="unknown", outcome_reason=reason
+        )
+        metrics.inc_unknown(path=_PATH)
+    await exchange.publish(
+        aio_pika.Message(
+            body=result.model_dump_json().encode(), delivery_mode=aio_pika.DeliveryMode.PERSISTENT
+        ),
+        routing_key="actuation.result",
+    )
+    _log.warning(
+        "actuation_outcome", correlation_id=req.correlation_id, outcome=state, reason=reason
+    )
 
 
 async def _emit_reject(
@@ -181,8 +247,11 @@ async def _emit_reject(
     req: ActuationRequest,
     *,
     reason: str,
+    retryable: bool = False,
 ) -> None:
-    result = ActuationRejectResult(**req.model_dump(), decision="reject", rejection_reason=reason)
+    result = ActuationRejectResult(
+        **req.model_dump(), decision="reject", rejection_reason=reason, retryable=retryable
+    )
     body = result.model_dump_json().encode()
     await nc.publish(dlq_subject, body)
     await exchange.publish(
@@ -195,11 +264,15 @@ async def _emit_reject(
 async def _emit_approve(
     exchange: aio_pika.abc.AbstractExchange,
     req: ActuationRequest,
+    *,
+    written_at: datetime,
+    replayed: bool,
 ) -> None:
     result = ActuationApproveResult(
         **req.model_dump(),
         decision="approve",
-        written_at=datetime.now(UTC),
+        written_at=written_at,
+        replayed=replayed,
     )
     body = result.model_dump_json().encode()
     await exchange.publish(

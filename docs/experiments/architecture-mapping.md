@@ -79,7 +79,7 @@ Actuation orchestrator
 
 RabbitMQ validates the publisher user ID. The bridge derives requester identity from that property and signs the ingress command. The validator verifies ingress evidence before policy checks, then signs approval bound to the complete command and intended writer. The writer verifies approval on receipt and immediately before native writes, including after connection setup. The post-write `approve` result remains a separate outcome. See [command approval](command-approval.md) for trust assumptions and deployment.
 
-`written_at` is currently assigned after the writer reply. It is not an instrumented native write initiation time. Similarly, a writer timeout emitted as a rejection does not prove that no device write occurred.
+`written_at` now records the writer’s acknowledged completion and is preserved when replaying a retained result. It is not a native write initiation timestamp or proof of physical process success. Writer reply loss is reported as unknown, not a known rejection. See [command recovery](command-recovery.md).
 
 ## Selected scenarios and controls
 
@@ -116,8 +116,8 @@ Native acquisition, final device writes and operational observations are declare
 | --- | --- | --- |
 | Bound admission and authority | C07 / CR5 | Implemented with validated broker identity and HMAC handoffs; verify deployed behaviour and retain the trusted-service assumptions |
 | Deadline at execution | C08 / CR5 | Implemented at the writer and native write boundaries; distributed clock policy and E0 deployment evidence remain |
-| Immutable IDs and recovery | C09 / CR6 | Select duplicate, retention and restart policy; distinguish command-ID protection from bottle-effect guards |
-| Uncertain outcomes | C10 / CR6 | Distinguish definite refusal from unknown write outcome and instrument initiation separately |
+| Immutable IDs and recovery | C09 / CR6 | Implemented with a single-writer SQLite ledger and PVC; verify deployment/restart behaviour and retain the distinction from bottle-effect guards |
+| Uncertain outcomes | C10 / CR6 | Typed pending/unknown outcomes and durable initiation state are implemented; full execution traces and physical reconciliation remain |
 | Event binding and coverage | C03, C06 / CR4 | Enforce declared event contract/version semantics and expose missed inspection coverage |
 | Execution evidence | C12 / CR8 | Complete attributable action records and timing uncertainty rules |
 | Distributed placement | C13 | Separate edge/cloud selections and connections; the current mapping remains single-cluster |
@@ -125,7 +125,7 @@ Native acquisition, final device writes and operational observations are declare
 
 Cooling and fault injection are experiment-only access paths, not admitted production command routes. Administrative access and direct simulator/broker access are outside the permitted business graph. They are listed as exclusions so the graph is not mistaken for proof that such connections are impossible.
 
-Command approval and writer verification are implemented in code. Deployment now requires the generated security Secret and updated command services; a cluster rebuild is unnecessary. Duplicate/recovery policy, full execution records and runtime E0 checks remain separate next steps.
+Command approval and writer verification are implemented in code. Deployment now requires the generated security Secret and updated command services; a cluster rebuild is unnecessary. [Duplicate/recovery policy](command-recovery.md) is now implemented with persistent writer storage. Full execution traces and runtime E0 checks remain next steps.
 
 ## Check the mapping
 

@@ -133,6 +133,7 @@ class ValidatorWorker:
                 self._settings.ingress_key.get_secret_value(),
                 "ingress",
                 "",
+                allow_expired=True,
             )
             result = validate_request(req, self._policies)
             if result.decision == "approve":
@@ -140,6 +141,7 @@ class ValidatorWorker:
                     req,
                     self._settings.approval_key.get_secret_value(),
                     self._settings.approved_writer,
+                    allow_expired=True,
                 )
             self._handled.labels(worker="actuation-event-validator", outcome=result.decision).inc()
             reply = NATSEnvelope(

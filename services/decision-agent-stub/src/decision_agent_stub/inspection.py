@@ -93,8 +93,13 @@ class RejectionTracker:
             return outcomes
         if result.get("decision") == "approve" and result.get("written_at"):
             entry.acknowledged = True
+        elif result.get("decision") == "pending":
+            return outcomes
+        elif result.get("decision") == "unknown":
+            outcomes.append((entry.inspection.inspection_id, "unknown"))
+            del self.pending[key]
         else:
-            # Existing pipeline errors include write timeouts, which do not prove no write occurred.
+            # A definite refusal does not confirm a physical rejection.
             outcomes.append((entry.inspection.inspection_id, "not_confirmed"))
             del self.pending[key]
         return outcomes + self._confirm()

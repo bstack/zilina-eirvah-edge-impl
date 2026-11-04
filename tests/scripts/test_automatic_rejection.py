@@ -334,3 +334,21 @@ def test_tracker_handles_write_timeout_as_unconfirmed_without_retry() -> None:
         now,
     ) == [(event.inspection_id, "not_confirmed")]
     assert not tracker.pending
+
+
+@pytest.mark.parametrize("decision", ["pending", "unknown"])
+def test_rejection_tracker_preserves_pending_and_reports_unknown(decision: str) -> None:
+    now = datetime.now(UTC)
+    event = sample(now=now)
+    req = InspectionRule(DecisionAgentSettings()).update(event, now)
+    assert req is not None
+    tracker = RejectionTracker()
+    tracker.add(req, event, baseline_count=0)
+    result = tracker.result({"correlation_id": req.correlation_id, "decision": decision}, now)
+    if decision == "pending":
+        assert result == [] and req.correlation_id in tracker.pending
+    else:
+        assert (
+            result == [(event.inspection_id, "unknown")]
+            and req.correlation_id not in tracker.pending
+        )

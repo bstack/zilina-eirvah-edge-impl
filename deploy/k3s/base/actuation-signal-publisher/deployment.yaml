@@ -5,6 +5,9 @@ metadata:
   labels: { app.kubernetes.io/name: actuation-signal-publisher }
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels: { app.kubernetes.io/name: actuation-signal-publisher }
   template:
@@ -14,6 +17,9 @@ spec:
         eirvah.uniza/scrape: "true"
         eirvah.uniza/scrape-port: "8080"
     spec:
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: actuation-signal-publisher
           image: actuation-signal-publisher:local
@@ -33,6 +39,8 @@ spec:
           ports:
             - { name: http, containerPort: 8080 }
           volumeMounts:
+            - name: command-ledger
+              mountPath: /var/lib/eirvah
             - name: config
               mountPath: /etc/actuation-signal-publisher
               readOnly: true
@@ -48,6 +56,9 @@ spec:
             requests: { cpu: "25m", memory: "256Mi" }
             limits:   { cpu: "200m", memory: "800Mi" }
       volumes:
+        - name: command-ledger
+          persistentVolumeClaim:
+            claimName: actuation-command-ledger
         - name: config
           configMap:
             name: actuation-signal-publisher-config

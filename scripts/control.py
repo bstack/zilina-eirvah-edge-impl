@@ -7,6 +7,7 @@ import asyncio
 import json
 import os
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
 
 import aio_pika
@@ -86,12 +87,21 @@ async def send(command: ActuationRequest, amqp_url: str) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--target", choices=["temperature", "conveyor", "filler", "capper", "reject"], required=True
+        "--target", choices=["temperature", "conveyor", "filler", "capper", "reject"]
     )
     parser.add_argument(
         "--action",
         choices=["set", "start", "stop", "speed", "reset", "open", "close", "reject"],
-        required=True,
+    )
+    parser.add_argument(
+        "--retry-command",
+        type=Path,
+        help="Replay the exact saved command without changing its ID, payload or deadline",
+    )
+    parser.add_argument(
+        "--save-command",
+        type=Path,
+        help="Save the command before submitting it; never overwrite an existing file",
     )
     parser.add_argument("--value", type=json.loads)
     parser.add_argument("--amqp-url", default=os.environ.get("EIRVAH_COMMAND_AMQP_URL"))
@@ -99,15 +109,31 @@ def main() -> None:
     if not args.amqp_url:
         parser.error("set EIRVAH_COMMAND_AMQP_URL or --amqp-url with experiment-driver credentials")
     try:
-        command = build_command(args.target, args.action, args.value)
-    except ValueError as exc:
+        if args.retry_command:
+            if args.target or args.action or args.value is not None or args.save_command:
+                parser.error("--retry-command cannot be combined with new command arguments")
+            command = ActuationRequest.model_validate_json(
+                args.retry_command.read_text(encoding="utf-8")
+            )
+        else:
+            if not args.target or not args.action:
+                parser.error("--target and --action are required for a new command")
+            command = build_command(args.target, args.action, args.value)
+            if args.save_command:
+                with args.save_command.open("x", encoding="utf-8") as saved:
+                    saved.write(command.model_dump_json(indent=2) + "\n")
+    except (ValueError, OSError) as exc:
         parser.error(str(exc))
     try:
         result = asyncio.run(send(command, args.amqp_url))
     except TimeoutError:
-        print("Outcome UNKNOWN: no correlated result; inspect evidence before retrying.")
+        print(
+            "Outcome UNKNOWN: no correlated result. Replay the saved command to query retained status; do not create a replacement command blindly."
+        )
         raise SystemExit(2) from None
     print(json.dumps(result, indent=2))
+    if result.get("decision") in {"unknown", "pending"}:
+        raise SystemExit(2)
     if result.get("decision") != "approve":
         raise SystemExit(1)
 

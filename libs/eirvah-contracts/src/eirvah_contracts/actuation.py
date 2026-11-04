@@ -79,6 +79,7 @@ class ActuationApproveResult(ActuationRequest):
 
     decision: Literal["approve"]
     written_at: datetime | None = None
+    replayed: bool = False
 
 
 class ActuationRejectResult(ActuationRequest):
@@ -86,3 +87,27 @@ class ActuationRejectResult(ActuationRequest):
 
     decision: Literal["reject"]
     rejection_reason: str
+    retryable: bool = False
+
+
+class WriteResult(BaseModel):
+    """Writer lifecycle outcome; completion is not proof of physical process success."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
+    outcome: Literal["completed", "not_executed", "pending", "unknown", "conflict"]
+    written_at: AwareDatetime | None = None
+    reason: str | None = None
+    retryable: bool = False
+    replayed: bool = False
+
+
+class ActuationUnknownResult(ActuationRequest):
+    decision: Literal["unknown"]
+    outcome_reason: str
+
+
+class ActuationPendingResult(ActuationRequest):
+    decision: Literal["pending"]
+    outcome_reason: str

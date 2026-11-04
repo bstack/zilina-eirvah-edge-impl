@@ -10,7 +10,7 @@ The command path authenticates the producer, signs the bridge handoff, and verif
 4. The orchestrator forwards the unchanged command and approval as `ApprovedWriteRequest`. It never forwards an unapproved request to the writer.
 5. The writer verifies the signature, command binding, writer identity and deadline on receipt and again immediately before native writes. The final checks happen after connection setup for OPC UA, Modbus and S7. Missing deadlines, naive timestamps and future-dated evidence fail closed.
 
-The public `ActuationRequest` remains version 1.0. New internal `AuthenticatedRequest`, `ApprovedWriteRequest` and `SignedEvidence` contracts are version 1.0. The AMQP result remains separate from admission evidence; `written_at` still describes result observation after the writer reply, not an instrumented initiation timestamp.
+The public `ActuationRequest` remains version 1.0. New internal `AuthenticatedRequest`, `ApprovedWriteRequest` and `SignedEvidence` contracts are version 1.0. The AMQP result remains separate from admission evidence; `written_at` records writer acknowledgement completion and is preserved on retained-result replay; it is not an instrumented initiation timestamp.
 
 ## Trust and scope
 
@@ -18,7 +18,7 @@ The broker, bridge, validator, writer and Kubernetes administrators are trusted.
 
 The current local setup assumes a protected network and synchronized clocks. This change does not add TLS or authenticate MQTT measurements. Protect connections when crossing untrusted network boundaries. Administrative broker credentials remain for local operators and must be treated as privileged.
 
-Valid approvals can still be replayed before expiry: durable command identity, duplicate execution prevention and recovery policy are the following implementation step. A matching signature does not establish physical success. Complete execution traces and authenticated outcome reports remain outside this change.
+[Command recovery](command-recovery.md) now adds durable writer identity and duplicate protection. Expired requests can pass authentication and current admission policy to retrieve a retained result; the writer still requires live approval before starting or retrying execution. A matching signature does not establish physical success. Complete execution traces and authenticated outcome reports remain separate work.
 
 The broker identity mechanism follows RabbitMQ's [validated user ID](https://www.rabbitmq.com/docs/validated-user-id) and [access control](https://www.rabbitmq.com/docs/access-control) behaviour. This implementation uses AMQP 0-9-1 via aio-pika.
 

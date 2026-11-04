@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from actuation_signal_publisher.ledger import CommandLedger
 from control import build_command
 from eirvah_contracts.envelope import NATSEnvelope
 
@@ -122,7 +123,9 @@ async def test_validator_signs_only_authenticated_permitted_commands() -> None:
 @pytest.mark.parametrize(
     "mode", ["valid", "missing", "tampered", "expired", "wrong_writer", "wrong_envelope"]
 )
-async def test_writer_never_calls_native_write_without_matching_live_approval(mode: str) -> None:
+async def test_writer_never_calls_native_write_without_matching_live_approval(
+    mode: str, tmp_path
+) -> None:
     from actuation_signal_publisher.config import SignalPublisherSettings
     from actuation_signal_publisher.service import SignalPublisherWorker
     from eirvah_contracts.authorization import ApprovedWriteRequest, sign_approval
@@ -138,13 +141,22 @@ async def test_writer_never_calls_native_write_without_matching_live_approval(mo
     if mode == "wrong_envelope":
         env.correlation_id = build_command("capper", "stop").correlation_id
     msg = MagicMock(data=env.model_dump_json().encode(), respond=AsyncMock())
+
+    async def native(target, value, *, before_write):
+        before_write()
+
     with (
         patch("actuation_signal_publisher.service.make_counter"),
         patch(
-            "actuation_signal_publisher.service.write_native_value", new_callable=AsyncMock
+            "actuation_signal_publisher.service.write_native_value",
+            new_callable=AsyncMock,
+            side_effect=native,
         ) as write,
     ):
-        worker = SignalPublisherWorker(SignalPublisherSettings(approval_key=KEY))
+        worker = SignalPublisherWorker(
+            SignalPublisherSettings(approval_key=KEY),
+            ledger=CommandLedger(tmp_path / "commands.sqlite3"),
+        )
         worker._native_targets[command.target_uns_topic] = MagicMock()
         if mode == "expired":
             with patch(
@@ -249,9 +261,18 @@ async def test_native_guard_rechecks_after_connect_before_mailbox_write(protocol
 
 
 @pytest.mark.parametrize(
-    "case", ["valid", "forged_ingress", "missing_approval", "altered_approval"]
+    "case",
+    [
+        "valid",
+        "forged_ingress",
+        "missing_approval",
+        "altered_approval",
+        "expired_replay",
+        "expired_new",
+        "missing_ledger",
+    ],
 )
-async def test_authenticated_pipeline_hands_approval_to_writer(case: str) -> None:
+async def test_authenticated_pipeline_hands_approval_to_writer(case: str, tmp_path) -> None:
     from pathlib import Path
 
     from actuation_control_orchestrator.metrics import ActuationMetrics
@@ -266,6 +287,8 @@ async def test_authenticated_pipeline_hands_approval_to_writer(case: str) -> Non
 
     root = Path(__file__).resolve().parents[2]
     command = build_command("filler", "open")
+    if case == "expired_new":
+        command = command.model_copy(update={"deadline": datetime.now(UTC) - timedelta(seconds=1)})
     envelope = build_nats_envelope(
         command.model_dump_json().encode(),
         user_id="experiment-driver",
@@ -276,7 +299,12 @@ async def test_authenticated_pipeline_hands_approval_to_writer(case: str) -> Non
         patch("actuation_signal_publisher.service.make_counter"),
     ):
         validator = ValidatorWorker(ValidatorSettings(ingress_key=INGRESS_KEY, approval_key=KEY))
-        writer = SignalPublisherWorker(SignalPublisherSettings(approval_key=KEY))
+        writer = SignalPublisherWorker(
+            SignalPublisherSettings(approval_key=KEY),
+            ledger=CommandLedger(tmp_path / "commands.sqlite3"),
+        )
+    if case == "missing_ledger":
+        writer._ledger = None
     validator._policies = load_policy(
         root / "deploy/k3s/base/actuation-event-validator/actuation-policy.yaml"
     )
@@ -315,9 +343,36 @@ async def test_authenticated_pipeline_hands_approval_to_writer(case: str) -> Non
         )
     import json
 
+    if case == "expired_replay":
+        with (
+            patch(
+                "eirvah_contracts.authorization.current_time",
+                return_value=command.deadline + timedelta(seconds=1),
+            ),
+            patch("actuation_signal_publisher.service.write_native_value", side_effect=native),
+        ):
+            await run_actuation_pipeline(
+                envelope=envelope,
+                cfg=load_pipeline_config(
+                    root / "deploy/k3s/base/actuation-control-orchestrator/actuation-control.yaml"
+                ),
+                nc=nc,
+                amqp_results_exchange=exchange,
+                metrics=ActuationMetrics(registry=CollectorRegistry()),
+                allow_writes=True,
+                request_reply_fn=rpc,
+            )
     outcome = json.loads(exchange.publish.call_args.args[0].body)
-    assert outcome["decision"] == ("approve" if case == "valid" else "reject")
-    assert effects == ([True] if case == "valid" else [])
+    assert outcome["decision"] == (
+        "approve"
+        if case in {"valid", "expired_replay"}
+        else "unknown"
+        if case == "missing_ledger"
+        else "reject"
+    )
+    assert effects == ([True] if case in {"valid", "expired_replay"} else [])
+    if case == "expired_replay":
+        assert outcome["replayed"]
 
 
 def test_permission_refresh_preserves_keys_passwords_and_unrelated_fields() -> None:

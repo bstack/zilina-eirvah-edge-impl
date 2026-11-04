@@ -25,7 +25,9 @@ def build_nats_envelope(amqp_body: bytes, *, user_id: str | None, ingress_key: s
     if user_id not in {"decision-agent-stub", "experiment-driver"}:
         raise ValueError("authenticated command publisher required")
     req = ActuationRequest.model_validate_json(amqp_body).model_copy(update={"requester": user_id})
-    authenticated = AuthenticatedRequest(command=req, identity=sign_ingress(req, ingress_key))
+    authenticated = AuthenticatedRequest(
+        command=req, identity=sign_ingress(req, ingress_key, allow_expired=True)
+    )
     return NATSEnvelope(
         correlation_id=req.correlation_id,
         payload=authenticated.model_dump(mode="json"),

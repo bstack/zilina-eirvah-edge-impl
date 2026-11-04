@@ -39,7 +39,7 @@ def require_key(key: str) -> bytes:
     return key.encode()
 
 
-def _digest(command: ActuationRequest) -> str:
+def command_digest(command: ActuationRequest) -> str:
     if command.deadline is None or command.deadline.utcoffset() is None:
         raise ValueError("command requires a timezone-aware deadline")
     if command.requested_at.utcoffset() is None:
@@ -63,26 +63,35 @@ def _signature(evidence: SignedEvidence, key: str) -> str:
 
 
 def _sign(
-    command: ActuationRequest, key: str, purpose: Literal["ingress", "approval"], writer: str
+    command: ActuationRequest,
+    key: str,
+    purpose: Literal["ingress", "approval"],
+    writer: str,
+    *,
+    allow_expired: bool = False,
 ) -> SignedEvidence:
     evidence = SignedEvidence(
         purpose=purpose,
-        command_digest=_digest(command),
+        command_digest=command_digest(command),
         writer=writer,
         issued_at=current_time(),
         signature="0" * 64,
     )
-    if command.deadline is None or current_time() > command.deadline:
+    if command.deadline is None or (not allow_expired and current_time() > command.deadline):
         raise ValueError("command expired")
     return evidence.model_copy(update={"signature": _signature(evidence, key)})
 
 
-def sign_ingress(command: ActuationRequest, key: str) -> SignedEvidence:
-    return _sign(command, key, "ingress", "")
+def sign_ingress(
+    command: ActuationRequest, key: str, *, allow_expired: bool = False
+) -> SignedEvidence:
+    return _sign(command, key, "ingress", "", allow_expired=allow_expired)
 
 
-def sign_approval(command: ActuationRequest, key: str, writer: str) -> SignedEvidence:
-    return _sign(command, key, "approval", writer)
+def sign_approval(
+    command: ActuationRequest, key: str, writer: str, *, allow_expired: bool = False
+) -> SignedEvidence:
+    return _sign(command, key, "approval", writer, allow_expired=allow_expired)
 
 
 def verify_evidence(
@@ -93,13 +102,18 @@ def verify_evidence(
     writer: str,
     *,
     now: datetime | None = None,
+    allow_expired: bool = False,
 ) -> None:
     at = now if now is not None else current_time()
     if evidence.purpose != purpose or evidence.writer != writer:
         raise ValueError("approval purpose or writer mismatch")
-    if not hmac.compare_digest(evidence.command_digest, _digest(command)):
+    if not hmac.compare_digest(evidence.command_digest, command_digest(command)):
         raise ValueError("approved command mismatch")
     if not hmac.compare_digest(evidence.signature, _signature(evidence, key)):
         raise ValueError("invalid command authentication")
-    if command.deadline is None or at > command.deadline or evidence.issued_at > at:
+    if (
+        command.deadline is None
+        or (not allow_expired and at > command.deadline)
+        or evidence.issued_at > at
+    ):
         raise ValueError("command expired or evidence time invalid")

@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from eirvah_contracts.actuation import ActuationRequest, ValidationResult
+from eirvah_contracts.actuation import ActuationRequest, ValidationResult, WriteResult
 from eirvah_contracts.authorization import AuthenticatedRequest, sign_approval, sign_ingress
 from eirvah_contracts.envelope import NATSEnvelope
 from eirvah_contracts.ulid import generate_correlation_id
@@ -270,8 +270,12 @@ async def test_run_actuation_pipeline_approve_writes_enabled() -> None:
                 payload=validation_ok.model_dump(mode="json"),
             )
         else:
-            # write_signal returns a plain ok envelope
-            reply = NATSEnvelope(correlation_id=correlation_id)
+            reply = NATSEnvelope(
+                correlation_id=correlation_id,
+                payload=WriteResult(outcome="completed", written_at=datetime.now(UTC)).model_dump(
+                    mode="json"
+                ),
+            )
         msg.data = reply.model_dump_json().encode()
         return msg
 
@@ -303,47 +307,66 @@ async def test_run_actuation_pipeline_approve_writes_enabled() -> None:
 
 
 @pytest.mark.asyncio
-async def test_run_actuation_pipeline_deadline_expired() -> None:
-    """ActuationRequest with an expired deadline → immediate reject without calling workers."""
+async def test_expired_request_can_retrieve_retained_completion() -> None:
     from actuation_control_orchestrator.metrics import ActuationMetrics
     from actuation_control_orchestrator.pipeline import run_actuation_pipeline
+    from eirvah_contracts.authorization import ApprovedWriteRequest
 
     past_deadline = datetime.now(UTC) - timedelta(seconds=5)
     req = _sample_request(deadline=past_deadline)
-    from unittest.mock import patch
+    envelope = NATSEnvelope(
+        correlation_id=req.correlation_id,
+        payload=AuthenticatedRequest(
+            command=req,
+            identity=sign_ingress(
+                req, "test-ingress-key-with-at-least-32-bytes", allow_expired=True
+            ),
+        ).model_dump(mode="json"),
+    )
+    completed_at = past_deadline - timedelta(seconds=1)
 
-    with patch(
-        "eirvah_contracts.authorization.current_time",
-        return_value=past_deadline - timedelta(seconds=1),
-    ):
-        envelope = _actuation_envelope(req)
-    cfg = _make_cfg()
+    async def rpc(*, nc, subject, payload, correlation_id, timeout_s):
+        incoming = NATSEnvelope.model_validate_json(payload)
+        if subject == "act.work.validate":
+            assert (
+                AuthenticatedRequest.model_validate(incoming.payload).command.deadline
+                == past_deadline
+            )
+            response = ValidationResult(
+                decision="approve",
+                approval=sign_approval(
+                    req,
+                    "test-approval-key-with-at-least-32-bytes",
+                    "actuation-signal-publisher",
+                    allow_expired=True,
+                ),
+            )
+        else:
+            assert (
+                ApprovedWriteRequest.model_validate(incoming.payload).command.deadline
+                == past_deadline
+            )
+            response = WriteResult(outcome="completed", written_at=completed_at, replayed=True)
+        return MagicMock(
+            data=NATSEnvelope(
+                correlation_id=correlation_id, payload=response.model_dump(mode="json")
+            )
+            .model_dump_json()
+            .encode()
+        )
 
-    request_reply_mock = AsyncMock()
-
-    nc_mock = MagicMock()
-    nc_mock.publish = AsyncMock()
-    amqp_exchange_mock = MagicMock()
-    amqp_exchange_mock.publish = AsyncMock()
-
-    reg = CollectorRegistry()
-    metrics = ActuationMetrics(registry=reg)
-
+    exchange = MagicMock(publish=AsyncMock())
+    nc = MagicMock(publish=AsyncMock())
     await run_actuation_pipeline(
         envelope=envelope,
-        cfg=cfg,
-        nc=nc_mock,
-        amqp_results_exchange=amqp_exchange_mock,
-        metrics=metrics,
+        cfg=_make_cfg(),
+        nc=nc,
+        amqp_results_exchange=exchange,
+        metrics=ActuationMetrics(registry=CollectorRegistry()),
         allow_writes=True,
-        request_reply_fn=request_reply_mock,
+        request_reply_fn=rpc,
     )
-
-    # No worker should have been called
-    request_reply_mock.assert_not_called()
-
-    # AMQP exchange must have been called with decision=reject, reason=expired
-    amqp_exchange_mock.publish.assert_called_once()
-    body = json.loads(amqp_exchange_mock.publish.call_args[0][0].body)
-    assert body["decision"] == "reject"
-    assert body["rejection_reason"] == "expired"
+    result = json.loads(exchange.publish.call_args.args[0].body)
+    assert result["decision"] == "approve" and result["replayed"]
+    assert datetime.fromisoformat(result["written_at"]) == completed_at
+    nc.publish.assert_not_called()

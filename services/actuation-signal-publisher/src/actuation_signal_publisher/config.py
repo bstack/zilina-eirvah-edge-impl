@@ -17,6 +17,8 @@ class SignalPublisherSettings(BaseSettings):
 
     approval_key: SecretStr = SecretStr("")
     writer_id: str = "actuation-signal-publisher"
+    ledger_path: Path = Path("/var/lib/eirvah/commands.sqlite3")
+    ledger_retention_s: int = Field(default=86400, ge=1)
 
     nats_servers: list[str] = ["nats://nats:4222"]
     mapping_path: Path = Path("/etc/actuation-signal-publisher/opcua-node-to-uns-mapping.yaml")

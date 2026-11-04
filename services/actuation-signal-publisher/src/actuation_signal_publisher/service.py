@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,13 @@ import yaml
 from asyncua import Client
 from eirvah_bus.client import BusClient
 from eirvah_bus.consumer import subscribe_queue_group
-from eirvah_contracts.authorization import ApprovedWriteRequest, require_key, verify_evidence
+from eirvah_contracts.actuation import WriteResult
+from eirvah_contracts.authorization import (
+    ApprovedWriteRequest,
+    command_digest,
+    require_key,
+    verify_evidence,
+)
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
@@ -23,6 +30,7 @@ from nats.aio.msg import Msg
 from pydantic import BaseModel
 
 from actuation_signal_publisher.config import SignalPublisherSettings
+from actuation_signal_publisher.ledger import CommandLedger
 from actuation_signal_publisher.native import NativeTarget, load_native_targets, write_native_value
 
 _log = structlog.get_logger("actuation-signal-publisher")
@@ -101,8 +109,11 @@ async def write_opcua_value(
 
 
 class SignalPublisherWorker:
-    def __init__(self, settings: SignalPublisherSettings) -> None:
+    def __init__(
+        self, settings: SignalPublisherSettings, *, ledger: CommandLedger | None = None
+    ) -> None:
         self._settings = settings
+        self._ledger = ledger
         self._targets: dict[str, WriteTarget] = {}
         self._native_targets: dict[str, NativeTarget] = {}
         self._ready = False
@@ -124,6 +135,11 @@ class SignalPublisherWorker:
             site=self._settings.site,
         )
         self._native_targets = load_native_targets(self._settings.native_targets_path)
+        if self._ledger is None:
+            self._ledger = CommandLedger(
+                self._settings.ledger_path, retention_s=self._settings.ledger_retention_s
+            )
+        self._ledger.recover()
         bus = BusClient(servers=self._settings.nats_servers, name="actuation-signal-publisher")
         await bus.connect()
         await subscribe_queue_group(nc=bus.nc, subject=SUBJECT, handler=self._handle)
@@ -133,6 +149,7 @@ class SignalPublisherWorker:
 
     async def _handle(self, msg: Msg) -> None:
         correlation_id = "UNKNOWN"
+        token: str | None = None
         try:
             envelope = NATSEnvelope.model_validate_json(msg.data)
             correlation_id = envelope.correlation_id
@@ -140,36 +157,86 @@ class SignalPublisherWorker:
             req = approved.command
             if req.correlation_id != correlation_id:
                 raise ValueError("command envelope identity mismatch")
+            key = self._settings.approval_key.get_secret_value()
+            # Expired evidence may retrieve a retained result, never initiate another write.
+            verify_evidence(
+                req,
+                approved.approval,
+                key,
+                "approval",
+                self._settings.writer_id,
+                allow_expired=True,
+            )
+            ledger = self._ledger
+            if ledger is None:
+                raise RuntimeError("durable command ledger is unavailable")
+            digest = command_digest(req)
+            try:
+                result = ledger.lookup(correlation_id, digest)
+            except Exception as exc:
+                raise RuntimeError("command history is unavailable") from exc
+            if result is None or result.retryable:
+                verify_evidence(req, approved.approval, key, "approval", self._settings.writer_id)
+                assert req.deadline is not None
+                try:
+                    claim = ledger.claim(correlation_id, digest, deadline=req.deadline.timestamp())
+                except Exception as exc:
+                    raise RuntimeError("command claim could not be established") from exc
+                token, result = claim.token, claim.result
+                if token is not None:
 
-            def before_write() -> None:
-                verify_evidence(
-                    req,
-                    approved.approval,
-                    self._settings.approval_key.get_secret_value(),
-                    "approval",
-                    self._settings.writer_id,
-                )
+                    def before_write() -> None:
+                        verify_evidence(
+                            req, approved.approval, key, "approval", self._settings.writer_id
+                        )
+                        ledger.mark_started(correlation_id, token)
 
-            before_write()
-
-            native = self._native_targets.get(req.target_uns_topic)
-            if native is not None:
-                await write_native_value(native, req.requested_value, before_write=before_write)
-            else:
-                target = self._targets.get(req.target_uns_topic)
-                if target is None:
-                    raise ValueError(f"no write target for topic {req.target_uns_topic!r}")
-                await write_opcua_value(
-                    target=target, value=req.requested_value, before_write=before_write
-                )
-
-            self._handled.labels(worker="actuation-signal-publisher", outcome="ok").inc()
-            reply = NATSEnvelope(correlation_id=correlation_id)
+                    try:
+                        native = self._native_targets.get(req.target_uns_topic)
+                        if native is not None:
+                            await write_native_value(
+                                native, req.requested_value, before_write=before_write
+                            )
+                        else:
+                            target = self._targets.get(req.target_uns_topic)
+                            if target is None:
+                                raise ValueError("no configured write target")
+                            await write_opcua_value(
+                                target=target, value=req.requested_value, before_write=before_write
+                            )
+                    except asyncio.CancelledError:
+                        ledger.fail(correlation_id, token, reason="execution_cancelled")
+                        raise
+                    except Exception as exc:
+                        result = ledger.fail(correlation_id, token, reason=type(exc).__name__)
+                    else:
+                        result = ledger.complete(
+                            correlation_id, token, written_at=datetime.now(UTC)
+                        )
+            assert result is not None
+            self._handled.labels(worker="actuation-signal-publisher", outcome=result.outcome).inc()
+            reply = NATSEnvelope(
+                correlation_id=correlation_id, payload=result.model_dump(mode="json")
+            )
         except Exception as exc:
             self._handled.labels(worker="actuation-signal-publisher", outcome="error").inc()
+            # Missing history cannot establish that an earlier delivery did not execute.
+            uncertain = token is not None or isinstance(exc, RuntimeError)
+            if token is not None and self._ledger is not None:
+                try:
+                    self._ledger.fail(correlation_id, token, reason="ledger_failure")
+                except Exception:
+                    _log.error("command_ledger_recovery_required", correlation_id=correlation_id)
+            result = WriteResult(
+                outcome="unknown" if uncertain else "not_executed",
+                reason=("ledger_failure" if token is not None else "ledger_unavailable")
+                if uncertain
+                else type(exc).__name__,
+            )
             reply = NATSEnvelope(
                 correlation_id=correlation_id,
                 status="error",
+                payload=result.model_dump(mode="json"),
                 error=EnvelopeError(kind=type(exc).__name__, message=str(exc)[:200]),
             )
         await msg.respond(reply.model_dump_json().encode())

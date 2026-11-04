@@ -16,6 +16,8 @@ KNOWN_REJECTION_REASONS = (
     "policy_reject",  # fallback if a validator reply omits reason_code
     "expired",
     "missing_approval",
+    "command_conflict",
+    "pre_write_failure",
     "validate_timeout",
     "bad_validate_reply",
     "writes_disabled",
@@ -27,8 +29,26 @@ class ActuationMetrics:
     def __init__(self, registry: CollectorRegistry = REGISTRY) -> None:
         self._approved = make_counter(
             "actuation_approved_total",
-            "Actuation requests approved and written",
+            "First writer completion reports received, excluding retained result replays",
             labelnames=["path"],
+            registry=registry,
+        )
+        self._unknown = make_counter(
+            "actuation_unknown_total",
+            "Command outcomes not known",
+            labelnames=["path"],
+            registry=registry,
+        )
+        self._pending = make_counter(
+            "actuation_pending_total",
+            "Commands still in progress",
+            labelnames=["path"],
+            registry=registry,
+        )
+        self._replayed = make_counter(
+            "actuation_replayed_total",
+            "Retained command status replies",
+            labelnames=["path", "outcome"],
             registry=registry,
         )
         self._rejected = make_counter(
@@ -68,3 +88,12 @@ class ActuationMetrics:
 
     def observe_e2e_latency(self, *, path: str, seconds: float) -> None:
         self._e2e_latency.labels(path=path).observe(seconds)
+
+    def inc_unknown(self, *, path: str) -> None:
+        self._unknown.labels(path=path).inc()
+
+    def inc_pending(self, *, path: str) -> None:
+        self._pending.labels(path=path).inc()
+
+    def inc_replayed(self, *, path: str, outcome: str) -> None:
+        self._replayed.labels(path=path, outcome=outcome).inc()
