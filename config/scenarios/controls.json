@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0",
+  "name": "five-control-functional-v1",
+  "description": "Local functional rehearsal. Clears observed motor faults; leaves conveyor running at 0.4 m/s, capper running at 1200 rpm, filler open and warmer recipe at 22 C. No automatic rollback on failure.",
+  "steps": [
+    {
+      "name": "warmer-set",
+      "target": "temperature",
+      "action": "set",
+      "value": 25.0
+    },
+    {
+      "name": "conveyor-reset-if-faulted",
+      "target": "conveyor",
+      "action": "reset",
+      "if_faulted": true
+    },
+    {
+      "name": "conveyor-stop",
+      "target": "conveyor",
+      "action": "stop"
+    },
+    {
+      "name": "conveyor-speed",
+      "target": "conveyor",
+      "action": "speed",
+      "value": 0.4
+    },
+    {
+      "name": "conveyor-start",
+      "target": "conveyor",
+      "action": "start"
+    },
+    {
+      "name": "filler-close",
+      "target": "filler",
+      "action": "close"
+    },
+    {
+      "name": "filler-open",
+      "target": "filler",
+      "action": "open"
+    },
+    {
+      "name": "capper-reset-if-faulted",
+      "target": "capper",
+      "action": "reset",
+      "if_faulted": true
+    },
+    {
+      "name": "capper-stop",
+      "target": "capper",
+      "action": "stop"
+    },
+    {
+      "name": "capper-speed",
+      "target": "capper",
+      "action": "speed",
+      "value": 1200
+    },
+    {
+      "name": "capper-start",
+      "target": "capper",
+      "action": "start"
+    },
+    {
+      "name": "reject-passed-bottle",
+      "target": "reject",
+      "action": "reject",
+      "value_source": "passed_bottle"
+    },
+    {
+      "name": "capper-speed-replay",
+      "replay_of": "capper-speed"
+    },
+    {
+      "name": "capper-invalid-speed",
+      "target": "capper",
+      "action": "speed",
+      "value": 2000,
+      "expect": "reject",
+      "reason_contains": "outside policy range"
+    },
+    {
+      "name": "warmer-final",
+      "target": "temperature",
+      "action": "set",
+      "value": 22.0
+    }
+  ]
+}

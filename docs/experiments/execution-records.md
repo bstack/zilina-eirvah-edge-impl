@@ -47,3 +47,5 @@ The full local suite passed with 381 tests and 16 skips; nine new cases cover re
 After rebuilding and deploying the five command services to `kind-eirvah-edge`, a capper command and its replay produced 13 records with every fresh-command stage present, exactly one initiation and one native acknowledgement. The original completion time was retained. An out-of-range capper command produced four refusal-path records without initiating a write. The actual collection CLI wrote both packages successfully. The capper setting was preserved and all 21 pods were Ready. This live run did not exercise process-feedback confirmation; that path has regression coverage through the existing bottle-rejection tracker.
 
 Local evidence: `results/execution-records/2026-11-04T15-41-49Z/summary.json` and its two trace directories (gitignored). These are engineering observations, not formal E0 results.
+
+For a repeatable five-control workload using these records, see [scenario runner](scenario-runner.md).
