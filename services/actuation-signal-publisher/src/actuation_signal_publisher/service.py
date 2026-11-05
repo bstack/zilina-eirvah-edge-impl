@@ -19,6 +19,7 @@ from eirvah_contracts.actuation import WriteResult
 from eirvah_contracts.authorization import (
     ApprovedWriteRequest,
     command_digest,
+    evidence_fingerprint,
     require_key,
     verify_evidence,
 )
@@ -191,6 +192,9 @@ class SignalPublisherWorker:
                         "executor_admitted",
                         req,
                         attempt_id=token,
+                        command_digest=digest,
+                        approval_fingerprint=evidence_fingerprint(approved.approval),
+                        approval_verified=True,
                         approval_issued_at=approved.approval.issued_at.isoformat(),
                     )
                     initiated = False
@@ -207,9 +211,16 @@ class SignalPublisherWorker:
                                 "write_initiated",
                                 req,
                                 attempt_id=token,
+                                command_digest=digest,
+                                approval_fingerprint=evidence_fingerprint(approved.approval),
+                                approval_verified=True,
                                 evidence_scope="before_first_native_frame",
                             )
                             initiated = True
+                        # Journal I/O must not let approval expire before the native frame.
+                        verify_evidence(
+                            req, approved.approval, key, "approval", self._settings.writer_id
+                        )
 
                     try:
                         native = self._native_targets.get(req.target_uns_topic)

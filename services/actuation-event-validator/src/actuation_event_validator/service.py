@@ -15,6 +15,7 @@ from eirvah_bus.consumer import subscribe_queue_group
 from eirvah_contracts.actuation import ActuationRequest, ValidationResult
 from eirvah_contracts.authorization import (
     AuthenticatedRequest,
+    evidence_fingerprint,
     require_key,
     sign_approval,
     verify_evidence,
@@ -150,6 +151,11 @@ class ValidatorWorker:
                 "validation_decided",
                 req,
                 decision=result.decision,
+                command_digest=authenticated.identity.command_digest,
+                approval_fingerprint=evidence_fingerprint(result.approval)
+                if result.approval
+                else None,
+                ingress_verified=True,
                 reason=result.reason,
                 approved_writer=self._settings.approved_writer,
                 approval_issued_at=result.approval.issued_at.isoformat()

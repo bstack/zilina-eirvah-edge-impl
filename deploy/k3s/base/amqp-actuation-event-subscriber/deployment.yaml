@@ -33,6 +33,10 @@ spec:
                   key: ingress-amqp-url
           ports:
             - { name: http, containerPort: 8080 }
+          startupProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet: { path: /readyz, port: 8080 }
             initialDelaySeconds: 5

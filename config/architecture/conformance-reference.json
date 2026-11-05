@@ -1,0 +1,466 @@
+{
+  "schema_version": "1.0",
+  "id": "paper1-v2.1-selected-local-profile-v1",
+  "reference": "Study Plan v2.1; Conformance Matrix v1.0 C01-C13",
+  "profile": {
+    "roles": [
+      "physical",
+      "adapter",
+      "contextualizer",
+      "namespace",
+      "consumer",
+      "decision",
+      "executor",
+      "observer"
+    ],
+    "flow_kinds": [
+      "industrial_state",
+      "event",
+      "command",
+      "operational_telemetry"
+    ],
+    "groups": {
+      "v1": "Physical system",
+      "v2": "Integration and contextualization",
+      "v3": "UNS information space",
+      "v4": "Decision and supervision",
+      "v5": "Command validation and execution",
+      "v6": "Observability"
+    },
+    "permitted_interactions": [
+      [
+        "physical",
+        "industrial_state",
+        "adapter"
+      ],
+      [
+        "adapter",
+        "industrial_state",
+        "contextualizer"
+      ],
+      [
+        "contextualizer",
+        "industrial_state",
+        "namespace"
+      ],
+      [
+        "namespace",
+        "industrial_state",
+        "consumer"
+      ],
+      [
+        "namespace",
+        "industrial_state",
+        "decision"
+      ],
+      [
+        "physical",
+        "event",
+        "adapter"
+      ],
+      [
+        "adapter",
+        "event",
+        "contextualizer"
+      ],
+      [
+        "contextualizer",
+        "event",
+        "namespace"
+      ],
+      [
+        "consumer",
+        "event",
+        "namespace"
+      ],
+      [
+        "decision",
+        "event",
+        "namespace"
+      ],
+      [
+        "executor",
+        "event",
+        "namespace"
+      ],
+      [
+        "namespace",
+        "event",
+        "consumer"
+      ],
+      [
+        "namespace",
+        "event",
+        "decision"
+      ],
+      [
+        "executor",
+        "event",
+        "executor"
+      ],
+      [
+        "decision",
+        "command",
+        "namespace"
+      ],
+      [
+        "namespace",
+        "command",
+        "executor"
+      ],
+      [
+        "executor",
+        "command",
+        "executor"
+      ],
+      [
+        "executor",
+        "command",
+        "physical"
+      ],
+      [
+        "physical",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "adapter",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "contextualizer",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "namespace",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "consumer",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "decision",
+        "operational_telemetry",
+        "observer"
+      ],
+      [
+        "executor",
+        "operational_telemetry",
+        "observer"
+      ]
+    ],
+    "role_layers": {
+      "physical": [
+        "physical"
+      ],
+      "adapter": [
+        "data"
+      ],
+      "contextualizer": [
+        "data"
+      ],
+      "namespace": [
+        "data"
+      ],
+      "consumer": [
+        "data"
+      ],
+      "decision": [
+        "decision"
+      ],
+      "executor": [
+        "data"
+      ],
+      "observer": [
+        "physical",
+        "data",
+        "decision"
+      ]
+    }
+  },
+  "required_routes": [
+    {
+      "id": "decision-opcua",
+      "source": "decision",
+      "target": "opcua-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "decision-modbus",
+      "source": "decision",
+      "target": "modbus-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "decision-s7",
+      "source": "decision",
+      "target": "s7-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "manual-decision-opcua",
+      "source": "manual-decision",
+      "target": "opcua-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "manual-decision-modbus",
+      "source": "manual-decision",
+      "target": "modbus-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "manual-decision-s7",
+      "source": "manual-decision",
+      "target": "s7-physical",
+      "flow": "command",
+      "must_include_roles": [
+        "namespace",
+        "executor"
+      ],
+      "scope": "Connectivity only; automatic controller currently commands temperature and rejection, other functions use manual commands."
+    },
+    {
+      "id": "inspection-event",
+      "source": "modbus-physical",
+      "target": "decision",
+      "flow": "event",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "opcua-publication",
+      "source": "opcua-physical",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "modbus-publication",
+      "source": "modbus-physical",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "s7-publication",
+      "source": "s7-physical",
+      "target": "state-namespace",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ]
+    },
+    {
+      "id": "selected-state-consumption",
+      "source": "modbus-physical",
+      "target": "decision",
+      "flow": "industrial_state",
+      "must_include_roles": [
+        "namespace"
+      ],
+      "scope": "Only the three explicit state topic filters on consume-state. No OPC UA or S7 subscription by this controller is asserted."
+    }
+  ],
+  "controls": [
+    {
+      "id": "temperature",
+      "protocol": "opcua",
+      "physical_component": "opcua-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature"
+      ]
+    },
+    {
+      "id": "conveyor",
+      "protocol": "modbus",
+      "physical_component": "modbus-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/run",
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+        "uniza/zilina/factory1/line_a/conveyor/belt_01/reset_fault"
+      ]
+    },
+    {
+      "id": "filler",
+      "protocol": "modbus",
+      "physical_component": "modbus-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/filler/valve_01/open"
+      ]
+    },
+    {
+      "id": "capper",
+      "protocol": "s7",
+      "physical_component": "s7-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/capper/motor_01/run",
+        "uniza/zilina/factory1/line_a/capper/motor_01/speed_setpoint",
+        "uniza/zilina/factory1/line_a/capper/motor_01/reset_fault"
+      ]
+    },
+    {
+      "id": "reject",
+      "protocol": "modbus",
+      "physical_component": "modbus-simulator",
+      "command_topics": [
+        "uniza/zilina/factory1/line_a/reject_station/rejector_01/reject_bottle"
+      ]
+    }
+  ],
+  "writer": "actuation-signal-publisher",
+  "validator": "actuation-event-validator",
+  "retention_seconds": 86400,
+  "rules": [
+    {
+      "id": "C01",
+      "title": "Typed architecture and permitted interactions",
+      "definitions": [
+        1,
+        2,
+        4,
+        7
+      ]
+    },
+    {
+      "id": "C02",
+      "title": "Required UNS and executor routes",
+      "definitions": [
+        3,
+        4,
+        5,
+        7
+      ]
+    },
+    {
+      "id": "C03",
+      "title": "Namespace and versioned contract binding",
+      "definitions": [
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "id": "C04",
+      "title": "Equivalent native inputs preserve meaning",
+      "definitions": [
+        3,
+        5
+      ]
+    },
+    {
+      "id": "C05",
+      "title": "State validity across ordering and restarts",
+      "definitions": [
+        6
+      ]
+    },
+    {
+      "id": "C06",
+      "title": "Inspection identity and business effects",
+      "definitions": [
+        6
+      ]
+    },
+    {
+      "id": "C07",
+      "title": "Bound admission and authority",
+      "definitions": [
+        5,
+        6
+      ]
+    },
+    {
+      "id": "C08",
+      "title": "Deadline at execution time",
+      "definitions": [
+        6
+      ]
+    },
+    {
+      "id": "C09",
+      "title": "Immutable command identity and duplicate policy",
+      "definitions": [
+        6
+      ]
+    },
+    {
+      "id": "C10",
+      "title": "Outcomes distinguish refusal from uncertainty",
+      "definitions": [
+        6
+      ]
+    },
+    {
+      "id": "C11",
+      "title": "Declared behaviour under loss and mixed traffic",
+      "definitions": [
+        3,
+        5,
+        6
+      ]
+    },
+    {
+      "id": "C12",
+      "title": "Trace evidence and scoped conformance verdicts",
+      "definitions": [
+        6,
+        7
+      ]
+    },
+    {
+      "id": "C13",
+      "title": "Placement preserves the declared architecture",
+      "definitions": [
+        8
+      ]
+    }
+  ],
+  "source_documents": [
+    {
+      "name": "Paper_1_Study_Plan_v2.1.docx",
+      "sha256": "7a39410f019ec2892172b15435827dad4127a79c24096156aee2146b7841c8ba"
+    },
+    {
+      "name": "Paper_1_Conformance_Matrix_v1.0.docx",
+      "sha256": "65cb9e97e586ec88267b9643564878562bfcb7760545d4ca2d16a1039815afe8"
+    }
+  ],
+  "process_observer": "decision-agent-stub"
+}

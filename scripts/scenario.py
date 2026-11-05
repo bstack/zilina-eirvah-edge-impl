@@ -14,7 +14,7 @@ import subprocess
 import time
 from collections.abc import Awaitable, Callable, Iterator
 from contextlib import ExitStack, contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, Protocol, Self
 from urllib.parse import urlsplit, urlunsplit
@@ -23,6 +23,7 @@ import aiomqtt
 from control import PREFIX, build_command, send
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.inspection import BottleInspection
+from eirvah_observability.execution import clock_snapshot
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +37,7 @@ class Step(BaseModel):
     action: str | None = None
     value: int | float | bool | str | None = None
     value_source: Literal["passed_bottle"] | None = None
+    deadline_seconds: float | None = None
     replay_of: str | None = None
     if_faulted: bool = False
     expect: Literal["approve", "reject"] = "approve"
@@ -50,6 +52,7 @@ class Step(BaseModel):
                 or self.value is not None
                 or self.value_source
                 or self.if_faulted
+                or self.deadline_seconds is not None
                 or self.expect != "approve"
             ):
                 raise ValueError("replay must contain only its name and an earlier successful step")
@@ -72,6 +75,8 @@ class Step(BaseModel):
                 self.target not in ("conveyor", "capper") or self.action != "reset"
             ):
                 raise ValueError("if_faulted is only valid for motor reset")
+        if self.deadline_seconds is not None and not math.isfinite(self.deadline_seconds):
+            raise ValueError("deadline_seconds must be finite")
         if self.reason_contains and self.expect != "reject":
             raise ValueError("reason_contains requires an expected rejection")
         return self
@@ -257,6 +262,7 @@ async def run_scenario(
         for iteration in range(1, repetitions + 1):
             commands: dict[str, ActuationRequest] = {}
             results: dict[str, dict[str, Any]] = {}
+            creation_clocks: dict[str, list[dict[str, Any]]] = {}
             for step in plan.steps:
                 row: dict[str, Any] = {
                     "iteration": iteration,
@@ -276,13 +282,24 @@ async def run_scenario(
                             continue
                     if step.replay_of:
                         command = commands[step.replay_of]
+                        issuer_clocks = creation_clocks[step.replay_of]
                     else:
                         value = step.value
                         if step.value_source:
                             row["observation"] = await observations.passed_bottle()
                             value = row["observation"]["value"]
+                        issuer_clocks = [clock_snapshot()]
                         command = build_command(str(step.target), str(step.action), value)
+                        if step.deadline_seconds is not None:
+                            command = command.model_copy(
+                                update={
+                                    "deadline": command.requested_at
+                                    + timedelta(seconds=step.deadline_seconds)
+                                }
+                            )
+                        issuer_clocks.append(clock_snapshot())
                     commands[step.name] = command
+                    creation_clocks[step.name] = issuer_clocks
                     row["correlation_id"] = command.correlation_id
                     journal(
                         "command_submitting",
@@ -290,6 +307,7 @@ async def run_scenario(
                         name=step.name,
                         command=command.model_dump(mode="json"),
                         observation=row.get("observation"),
+                        issuer_clocks=issuer_clocks,
                     )
                     async with asyncio.timeout(20):
                         result = await sender(command)

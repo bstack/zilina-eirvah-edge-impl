@@ -24,7 +24,7 @@ Every record includes command ID, requester, target, requested value/type, origi
 
 For all five controls, native acknowledgement is distinct from physical/process confirmation. Only the existing bottle-rejection feedback tracker emits `process_observed`; it reports simulator feedback, not a measured real plant. Temperature settling and the other process responses remain unestablished by this instrumentation. Matching state alone would not prove that a particular command caused it, especially with concurrent commands.
 
-Logs are observations, not signed or transactionally durable execution proofs. A crash or log loss can leave gaps even when the ledger survives. UTC clock uncertainty is explicitly unknown (`clock_uncertainty_s=null`); monotonic times are comparable only within the same process instance. Do not infer distributed ordering or exactly-once physical effects from a sorted list. Full E0 conformance checking remains a separate roadmap step.
+Logs are observations, not signed or transactionally durable execution proofs. A crash or log loss can leave gaps even when the ledger survives. UTC clock uncertainty is explicitly unknown (`clock_uncertainty_s=null`); monotonic times are comparable within a process, or across components only when the recorded Linux boot/time-namespace clock domain matches. Do not infer distributed ordering or exactly-once physical effects from a sorted list. The [scoped E0 evaluator](conformance.md) now consumes these records; complete experimental coverage remains separate.
 
 ## Collect one command on Windows
 
@@ -49,3 +49,5 @@ After rebuilding and deploying the five command services to `kind-eirvah-edge`, 
 Local evidence: `results/execution-records/2026-11-04T15-41-49Z/summary.json` and its two trace directories (gitignored). These are engineering observations, not formal E0 results.
 
 For a repeatable five-control workload using these records, see [scenario runner](scenario-runner.md).
+
+The newer [bounded E0 capture](conformance.md#bounded-command-capture-and-deployment-transfer) adds private sequence journals, measured clock envelopes, verified approval fingerprints and deployment-specific collection targets. Its derived calibrated evidence does not retroactively change the raw logger clock bounds or the historical log-only packages above.

@@ -147,3 +147,7 @@ The six checks cover:
 These are offline mapping consistency checks. They do not contact a cluster, enumerate all runtime connections, authenticate callers, check every deployment override, execute the conformance cases, or prove Definition 7's universal condition. Keep `conformance_verdict` as `not_assessed` until scoped runtime checks supply evidence.
 
 When services, mappings or contracts change, update this manifest and its source references. When placement changes, update the placement record without silently changing logical responsibilities. The E0 checker and scenario runner can build on this representation in later steps.
+
+## Scoped E0 evaluator
+
+The [E0 checker](conformance.md) now evaluates the declared graph and retained command evidence against a separate pinned reference profile. It reports pass, fail or unknown per subcheck and C01–C13 rule family, with not-run experiments and evidence gaps explicit. It does not change this manifest into a claim of verified deployment or universal conformance.

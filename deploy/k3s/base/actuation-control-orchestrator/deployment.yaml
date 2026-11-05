@@ -34,6 +34,10 @@ spec:
             - name: config
               mountPath: /etc/actuation-control-orchestrator
               readOnly: true
+          startupProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet: { path: /readyz, port: 8080 }
             initialDelaySeconds: 5

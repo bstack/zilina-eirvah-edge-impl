@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "id": "local-command-e0-v1",
+  "scope": "Bounded local command conformance only; whole-study C01-C13 coverage remains separate.",
+  "actors": [
+    "amqp-actuation-event-subscriber",
+    "actuation-control-orchestrator",
+    "actuation-event-validator",
+    "actuation-signal-publisher"
+  ],
+  "clock_model": "Capture-client UTC reference with before/after causal-envelope calibration. No unobserved clock excursion outside the observed envelope during the bounded run. External UTC accuracy is not established.",
+  "required_checks": [
+    "C01.typed_graph",
+    "C02.required_routes",
+    "C03.selected_commands",
+    "C07.write_policy",
+    "C07.admission",
+    "C08.deadline",
+    "C09.initiations",
+    "C09.binding",
+    "C10.outcome_meaning",
+    "C12.record_integrity",
+    "C12.stage_coverage",
+    "C12.command_reconciliation",
+    "C13.declared_placement"
+  ],
+  "required_controls": [
+    "temperature",
+    "conveyor",
+    "filler",
+    "capper",
+    "reject"
+  ],
+  "additional_cases": [
+    "exact-replay",
+    "policy-refusal",
+    "expired-fresh-request",
+    "unsigned-writer-refusal"
+  ],
+  "excluded_study_obligations": [
+    "full industrial semantics and equivalent inputs",
+    "state/event restart policies",
+    "broker-loss/mixed-load/scaling experiments",
+    "distributed deployment support"
+  ]
+}

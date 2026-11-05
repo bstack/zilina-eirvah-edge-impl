@@ -117,3 +117,8 @@ def verify_evidence(
         or evidence.issued_at > at
     ):
         raise ValueError("command expired or evidence time invalid")
+
+
+def evidence_fingerprint(evidence: SignedEvidence) -> str:
+    """Correlate the same verified ticket without exporting its signature."""
+    return hashlib.sha256(evidence.model_dump_json().encode()).hexdigest()

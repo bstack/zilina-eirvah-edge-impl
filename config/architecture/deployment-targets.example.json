@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "default": {
+    "context": "YOUR-EDGE-CONTEXT",
+    "namespace": "eirvah-edge"
+  },
+  "components": {
+    "amqp-actuation-event-subscriber": {
+      "context": "YOUR-CLOUD-CONTEXT",
+      "namespace": "eirvah-cloud"
+    },
+    "actuation-control-orchestrator": {
+      "context": "YOUR-CLOUD-CONTEXT",
+      "namespace": "eirvah-cloud"
+    },
+    "actuation-event-validator": {
+      "context": "YOUR-CLOUD-CONTEXT",
+      "namespace": "eirvah-cloud"
+    },
+    "rabbitmq": {
+      "context": "YOUR-CLOUD-CONTEXT",
+      "namespace": "eirvah-cloud"
+    }
+  }
+}
