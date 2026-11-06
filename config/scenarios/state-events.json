@@ -1,0 +1,1241 @@
+{
+  "schema_version": "1.0",
+  "id": "local-consumer-state-event-cases-v1",
+  "cases": [
+    {
+      "id": "ordered-speed",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 26.0,
+            "status": "fresh",
+            "value": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing-speed",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "tick",
+          "now_s": 6,
+          "expect": {
+            "status": "stale",
+            "value": 0.4,
+            "command_value": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "restart-speed",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "consumer_restart",
+          "now_s": 1,
+          "expect": {
+            "status": "unknown",
+            "value": null,
+            "command_value": null
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 26.0,
+            "status": "fresh",
+            "value": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "id": "ordered-reject_count",
+      "kind": "state",
+      "stream": "reject_count",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 10,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 10
+          }
+        },
+        {
+          "op": "receive",
+          "value": 11,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 11
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing-reject_count",
+      "kind": "state",
+      "stream": "reject_count",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 10,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 10
+          }
+        },
+        {
+          "op": "tick",
+          "now_s": 6,
+          "expect": {
+            "status": "stale",
+            "value": 10,
+            "command_value": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "restart-reject_count",
+      "kind": "state",
+      "stream": "reject_count",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 10,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 10
+          }
+        },
+        {
+          "op": "consumer_restart",
+          "now_s": 1,
+          "expect": {
+            "status": "unknown",
+            "value": null,
+            "command_value": null
+          }
+        },
+        {
+          "op": "receive",
+          "value": 11,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 11
+          }
+        }
+      ]
+    },
+    {
+      "id": "ordered-rejected_bottle",
+      "kind": "state",
+      "stream": "rejected_bottle",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 10,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 10
+          }
+        },
+        {
+          "op": "receive",
+          "value": 11,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 11
+          }
+        }
+      ]
+    },
+    {
+      "id": "missing-rejected_bottle",
+      "kind": "state",
+      "stream": "rejected_bottle",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 10,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 10
+          }
+        },
+        {
+          "op": "tick",
+          "now_s": 6,
+          "expect": {
+            "status": "stale",
+            "value": 10,
+            "command_value": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "restart-rejected_bottle",
+      "kind": "state",
+      "stream": "rejected_bottle",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 10,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 10
+          }
+        },
+        {
+          "op": "consumer_restart",
+          "now_s": 1,
+          "expect": {
+            "status": "unknown",
+            "value": null,
+            "command_value": null
+          }
+        },
+        {
+          "op": "receive",
+          "value": 11,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": null,
+            "status": "fresh",
+            "value": 11
+          }
+        }
+      ]
+    },
+    {
+      "id": "late-state",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 2,
+          "now_s": 2,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 26.0,
+            "status": "fresh",
+            "value": 0.7
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 1,
+          "now_s": 2,
+          "quality": "good",
+          "expect": {
+            "accepted": false,
+            "reason": "out_of_order",
+            "command_value": null,
+            "status": "fresh",
+            "value": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "id": "duplicate-state",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0.1,
+          "quality": "good",
+          "expect": {
+            "accepted": false,
+            "reason": "duplicate",
+            "command_value": null,
+            "status": "fresh",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "conflicting-state",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 0,
+          "now_s": 0.1,
+          "quality": "good",
+          "expect": {
+            "accepted": false,
+            "reason": "timestamp_conflict",
+            "command_value": null,
+            "status": "fresh",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "stale-state",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 0,
+          "now_s": 6,
+          "quality": "good",
+          "expect": {
+            "accepted": false,
+            "reason": "stale",
+            "command_value": null,
+            "status": "stale",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "future-state",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 2,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": false,
+            "reason": "future",
+            "command_value": null,
+            "status": "fresh",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "bad-quality-state",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "bad",
+          "expect": {
+            "accepted": false,
+            "reason": "bad_quality",
+            "command_value": null,
+            "status": "fresh",
+            "value": 0.4
+          }
+        }
+      ]
+    },
+    {
+      "id": "publisher-restart-no-epoch",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 0,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "publisher_restart",
+          "now_s": 1,
+          "expect": {
+            "status": "fresh",
+            "value": 0.4,
+            "command_value": null
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": -1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": false,
+            "reason": "out_of_order",
+            "command_value": null,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "receive",
+          "value": 0.7,
+          "source_s": 1,
+          "now_s": 1,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 26.0,
+            "status": "fresh",
+            "value": 0.7
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-duplicate",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0.1,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "duplicate",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-conflict",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 11,
+          "now_s": 0.1,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "identity_conflict",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-passed",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": true,
+          "expect": {
+            "accepted": true,
+            "reason": "passed",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0.1,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": true,
+          "expect": {
+            "accepted": false,
+            "reason": "duplicate",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-bottle-duplicate",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 2,
+          "bottle_id": 10,
+          "now_s": 0.1,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "bottle_duplicate",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-gap",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 3,
+          "bottle_id": 11,
+          "now_s": 0.1,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 11,
+            "missing_sequences": 1,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-sequence-regression",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 3,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 2,
+          "bottle_id": 11,
+          "now_s": 0.1,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "sequence_regression",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-expiry",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 2,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "stale",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-future",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "future",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-capacity",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 2,
+          "bottle_id": 11,
+          "now_s": 0.1,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 11,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 3,
+          "bottle_id": 12,
+          "now_s": 0.2,
+          "source_s": 0.2,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "capacity",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0.3,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "duplicate",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-consumer-restart",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "consumer_restart",
+          "now_s": 0.1,
+          "expect": {
+            "command_value": null
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0.2,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-session-and-wrap",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 65535,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 11,
+          "now_s": 0.1,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "sequence_regression",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "publisher_restart",
+          "now_s": 0.2,
+          "expect": {
+            "command_value": null
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 11,
+          "now_s": 0.2,
+          "source_s": 0.2,
+          "session": "bbbbbbbbbbbbbbbb",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 11,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "state-age-boundary",
+      "kind": "state",
+      "stream": "speed",
+      "steps": [
+        {
+          "op": "receive",
+          "value": 0.4,
+          "source_s": 0,
+          "now_s": 5,
+          "quality": "good",
+          "expect": {
+            "accepted": true,
+            "reason": "accepted",
+            "command_value": 22.0,
+            "status": "fresh",
+            "value": 0.4
+          }
+        },
+        {
+          "op": "tick",
+          "now_s": 5.000001,
+          "expect": {
+            "status": "stale",
+            "value": 0.4,
+            "command_value": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-age-boundary",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 1.999999,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 2.0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "stale",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-retention-capacity",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 1,
+          "bottle_id": 10,
+          "now_s": 0,
+          "source_s": 0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 10,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 2,
+          "bottle_id": 11,
+          "now_s": 0.1,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 11,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 3,
+          "bottle_id": 12,
+          "now_s": 12.0,
+          "source_s": 12.0,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "capacity",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 4,
+          "bottle_id": 13,
+          "now_s": 12.100001,
+          "source_s": 12.100001,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 13,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "inspection-late-unique",
+      "kind": "event",
+      "steps": [
+        {
+          "op": "receive",
+          "sequence": 3,
+          "bottle_id": 12,
+          "now_s": 0.2,
+          "source_s": 0.2,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 12,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 2,
+          "bottle_id": 11,
+          "now_s": 0.3,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": true,
+            "reason": "failed",
+            "command_value": 11,
+            "missing_sequences": 0,
+            "late_sequence": true
+          }
+        },
+        {
+          "op": "receive",
+          "sequence": 2,
+          "bottle_id": 11,
+          "now_s": 0.4,
+          "source_s": 0.1,
+          "session": "aaaaaaaaaaaaaaaa",
+          "passed": false,
+          "expect": {
+            "accepted": false,
+            "reason": "duplicate",
+            "command_value": null,
+            "missing_sequences": 0,
+            "late_sequence": false
+          }
+        }
+      ]
+    }
+  ]
+}

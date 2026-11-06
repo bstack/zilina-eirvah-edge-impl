@@ -15,6 +15,8 @@ class SubscriberSettings(BaseSettings):
         extra="ignore",
     )
 
+    source_id: str = "opcua-data-subscriber"
+    position_path: Path = Path("/var/lib/eirvah/positions.sqlite3")
     nats_servers: list[str] = ["nats://nats:4222"]
     node_list_path: Path = Path("/etc/opcua-data-subscriber/opcua-node-list.yaml")
     http_port: int = Field(default=8080, ge=1024, le=65535)

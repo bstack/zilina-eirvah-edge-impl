@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from pydantic import Field, model_validator
+from pathlib import Path
+
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -13,6 +15,10 @@ class DecisionAgentSettings(BaseSettings):
         extra="ignore",
     )
 
+    inbox_path: Path | None = None
+    require_positions: bool = False
+    receipt_key: SecretStr = SecretStr("")
+    receipt_topic: str = "uniza/zilina/factory1/line_a/inspector/inspector_01/inspection_receipt"
     mqtt_host: str = "mosquitto"
     mqtt_port: int = 1883
     mqtt_username: str = "eirvah"

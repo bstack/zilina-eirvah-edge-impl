@@ -18,8 +18,10 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
+from data_conformance import check_data_evidence
 from eirvah_contracts.ulid import is_valid_correlation_id
 from eirvah_contracts.uns import parse_uns_topic
+from recovery_checks import check_recovery
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "config/architecture/conformance-reference.json"
@@ -812,6 +814,8 @@ def evaluate(
     policies: list[dict[str, Any]],
     collection_errors: list[str],
     commands: list[dict[str, Any]] | None = None,
+    data_evidence: dict[str, Any] | None = None,
+    recovery_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     checks = (
         check_structure(manifest, reference)
@@ -825,6 +829,15 @@ def evaluate(
         "C10": "Loss-of-reply and independent device/outcome reconciliation case evidence not supplied",
         "C11": "Loss, congestion, reconnect and mixed-flow policy experiment evidence not supplied",
     }
+    if data_evidence is not None:
+        checks.extend(check_data_evidence(data_evidence))
+        del deferred["C05"]
+        del deferred["C06"]
+    if recovery_evidence is not None:
+        recovery_checks = check_recovery(recovery_evidence)
+        replaced = {c["check"] for c in recovery_checks}
+        checks = [c for c in checks if c["check"] not in replaced]
+        checks.extend(recovery_checks)
     checks.extend(
         result(
             rule + ".experiment",
@@ -972,6 +985,12 @@ def main() -> None:
     parser.add_argument(
         "--run", type=Path, help="Scenario evidence directory with journal and collected traces"
     )
+    parser.add_argument(
+        "--data-evidence", type=Path, help="Retained C05/C06 consumer evidence.json"
+    )
+    parser.add_argument(
+        "--recovery-evidence", type=Path, help="Retained live C05/C06 recovery evidence.json"
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     output = args.output or ROOT / "results/conformance" / datetime.now(UTC).strftime(
@@ -1011,6 +1030,26 @@ def main() -> None:
     records, commands, errors, files = (
         read_run(args.run) if args.run else ([], [], ["No runtime package supplied"], [])
     )
+    data_evidence = None
+    if args.data_evidence:
+        files.append(args.data_evidence)
+        try:
+            data_evidence = json.loads(args.data_evidence.read_text(encoding="utf-8"))
+            if not isinstance(data_evidence, dict):
+                raise ValueError("invalid data evidence")
+        except (OSError, ValueError):
+            data_evidence = {}
+            input_errors.append("state/event evidence unavailable or malformed")
+    recovery_evidence = None
+    if args.recovery_evidence:
+        files.append(args.recovery_evidence)
+        try:
+            recovery_evidence = json.loads(args.recovery_evidence.read_text(encoding="utf-8"))
+            if not isinstance(recovery_evidence, dict):
+                raise ValueError("invalid recovery evidence")
+        except (OSError, ValueError):
+            recovery_evidence = {}
+            input_errors.append("recovery evidence unavailable or malformed")
     report = evaluate(
         manifest,
         reference,
@@ -1018,6 +1057,8 @@ def main() -> None:
         policies=policies,
         collection_errors=errors + input_errors,
         commands=commands,
+        data_evidence=data_evidence,
+        recovery_evidence=recovery_evidence,
     )
     report["input_errors"] = input_errors
     files.extend(
@@ -1029,6 +1070,11 @@ def main() -> None:
             ROOT / "config/opcua-node-to-uns-mapping.yaml",
             ROOT / "config/opcua-node-list.yaml",
             Path(__file__).resolve(),
+            ROOT / "scripts/data_conformance.py",
+            ROOT / "scripts/recovery_checks.py",
+            ROOT / "config/architecture/recovery-case.json",
+            ROOT / "config/architecture/state-event-policy.json",
+            ROOT / "config/scenarios/state-events.json",
         ]
     )
     report["inputs"] = [

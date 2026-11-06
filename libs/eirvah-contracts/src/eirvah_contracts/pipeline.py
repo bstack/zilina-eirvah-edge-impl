@@ -6,7 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from eirvah_contracts.signals import Quality, SignalValue, SignalValueType
+from eirvah_contracts.signals import Quality, SignalValue, SignalValueType, SourcePosition
 from eirvah_contracts.ulid import is_valid_correlation_id
 from eirvah_contracts.uns import UNSPath
 
@@ -19,8 +19,8 @@ class ContextualizeResult(BaseModel):
     uns_topic: str
     uns_path: UNSPath
     semantic_type: str
-    sensor_uri: str    # e.g. "https://eirvah.uniza/ontology/TorqueSensor01"
-    feature_uri: str   # e.g. "https://eirvah.uniza/ontology/Capper"
+    sensor_uri: str  # e.g. "https://eirvah.uniza/ontology/TorqueSensor01"
+    feature_uri: str  # e.g. "https://eirvah.uniza/ontology/Capper"
     property_uri: str  # e.g. "https://eirvah.uniza/ontology/Torque"
 
 
@@ -43,6 +43,7 @@ class PublishRequest(BaseModel):
     uns_path: UNSPath
     source_endpoint: str
     source_node_id: str
+    position: SourcePosition | None = None
     source_timestamp: datetime
     edge_ingress: datetime
     sensor_uri: str

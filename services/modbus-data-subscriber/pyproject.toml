@@ -7,12 +7,14 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "pymodbus>=3.6,<3.8",
     "nats-py>=2.7",
+    "aiomqtt>=2.0",
     "pydantic>=2.8",
     "pydantic-settings>=2.5",
     "pyyaml>=6.0",
     "structlog>=24.0",
     "uvicorn>=0.30",
     "eirvah-contracts",
+    "eirvah-controls",
     "eirvah-bus",
     "eirvah-observability",
 ]

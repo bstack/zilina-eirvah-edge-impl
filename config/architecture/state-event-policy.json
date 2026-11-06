@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "id": "selected-consumer-state-event-policy-v1",
+  "state": {
+    "max_age_s": 5.0,
+    "ordering": "strictly_increasing_timestamp_per_topic",
+    "source_epoch": "unavailable",
+    "consumer_restart": "clear_to_unknown",
+    "topics": [
+      "speed",
+      "reject_count",
+      "rejected_bottle"
+    ],
+    "normal_speed_max": 0.5,
+    "high_speed_min": 0.6,
+    "normal_setpoint": 22.0,
+    "high_setpoint": 26.0,
+    "topic_bindings": {
+      "speed": "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+      "reject_count": "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count",
+      "rejected_bottle": "uniza/zilina/factory1/line_a/reject_station/rejector_01/last_rejected_bottle"
+    }
+  },
+  "inspection": {
+    "max_age_s": 2.0,
+    "dedup_retention_s": 12.0,
+    "capacity": 2,
+    "capacity_scope": "small isolated consumer stress case; deployed default remains 4096",
+    "identity": "session:sequence with immutable bottle/result/time",
+    "ordering": "Observed sequence frontier per session; fresh unique older-time events remain actionable. A backwards sequence with newer source time is refused; wrap requires a new session.",
+    "consumer_restart": "volatile_dedup_clears",
+    "delivery": "sampled_register_snapshot",
+    "topic": "uniza/zilina/factory1/line_a/inspector/inspector_01/bottle_inspection"
+  },
+  "required_cases": [
+    "ordered-speed",
+    "missing-speed",
+    "restart-speed",
+    "ordered-reject_count",
+    "missing-reject_count",
+    "restart-reject_count",
+    "ordered-rejected_bottle",
+    "missing-rejected_bottle",
+    "restart-rejected_bottle",
+    "late-state",
+    "duplicate-state",
+    "conflicting-state",
+    "stale-state",
+    "future-state",
+    "bad-quality-state",
+    "publisher-restart-no-epoch",
+    "inspection-duplicate",
+    "inspection-conflict",
+    "inspection-passed",
+    "inspection-bottle-duplicate",
+    "inspection-gap",
+    "inspection-sequence-regression",
+    "inspection-expiry",
+    "inspection-future",
+    "inspection-capacity",
+    "inspection-consumer-restart",
+    "inspection-session-and-wrap",
+    "state-age-boundary",
+    "inspection-age-boundary",
+    "inspection-retention-capacity",
+    "inspection-late-unique"
+  ],
+  "scope": "Production consumer code replayed in-process using injected times. No broker, native write, physical effect or deployed restart is exercised.",
+  "command_topics": {
+    "temperature": "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature",
+    "reject": "uniza/zilina/factory1/line_a/reject_station/rejector_01/reject_bottle"
+  }
+}

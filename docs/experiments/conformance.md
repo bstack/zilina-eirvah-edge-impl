@@ -44,8 +44,8 @@ The evaluator always reports `universal_conformance=not_established`. Finite obs
 | C02 / Definitions 3–5, 7 | Every pinned required route exists; removing namespace/executor-role vertices cannot leave a bypass path; deleting a requirement cannot silently weaken the check | Isolated unapproved-writer refusal with independent native/device evidence |
 | C03 / Definitions 3–5 | Selected five-control topics have valid syntax, declared command version, admission policy and native/OPC UA mappings | Full industrial identity/description semantics and supported receiver versions across every flow |
 | C04 / Definitions 3, 5 | Explicitly not run when equivalent native inputs/outputs are absent | Versioned golden dataset and semantic comparisons from E2 preparation |
-| C05 / Definition 6 | Explicitly not run for absent state sequences | Ordered/late/missing samples, restart epochs and declared freshness policy |
-| C06 / Definition 6 | When present, bottle-specific process records require the requested bottle ID, increased counter and post-request observation times | Delivery/event/effect accounting, retention, restarts and sampled-event coverage |
+| C05 / Definition 6 | Pinned consumer replay checks latest timestamps, equal-time conflicts, late/future/bad samples, stale/missing state and fresh consumer recreation on three consumed streams | State has no source epoch/sequence; real publisher/pod restarts and complete deployed-stream coverage remain separate |
+| C06 / Definition 6 | Consumer replay checks immutable retained inspection IDs, duplicate/bottle suppression, expiry, capacity/retention, sequence gaps/regression and source-session changes. Existing command traces separately check bottle-specific counter/identity feedback | Real delivery/effect accounting and restart recovery remain unestablished by component replay; snapshots are not a durable event log |
 | C07 / Definitions 5–6 | Observed writer and target policy; same-process admission for the same attempt and immutable fields; matching prior validator approval under trusted-record assumptions | Bounded cross-component ordering, full authority-binding and negative writer cases; logs alone do not cryptographically attest approval |
 | C08 / Definition 6 | Initiation time interval compared with the command deadline | A justified bound on UTC clock uncertainty at the execution boundary |
 | C09 / Definition 6 | Recorded binding consistency and duplicate initiation detection within the declared window; identical collected records are deduplicated by record ID | Complete history and selected ledger/restart/retention boundary cases |
@@ -137,3 +137,106 @@ Two completed captures passed the pinned 21 local command-case checks. The first
 Each contains raw start/end capture, inventory, scenario journal, native read-back snapshots, read-only ledger export, clock calibration, controller restoration state, local-case report and whole-study report. The whole-study verdict remains unknown. Earlier stopped attempts were retained separately and were not reclassified as successful; no command was blindly resent to turn an unknown into a pass.
 
 The regression suite passed with 460 tests and 16 skips. Strict mypy checks passed for capture/scenario/conformance and the changed contracts, observability and service code. Provider-routing tests cover distinct component contexts/namespaces and native transport/ledger targeting; actual public, private and hybrid runs have not yet been performed. Capture journal I/O and measurement overhead must be included when preparing the later scalability experiments.
+
+
+## State and event checks — C05/C06
+
+Run the production consumer code against the prospective finite case plan, without connecting to a broker or cluster:
+
+```powershell
+uv run python scripts/state_event_case.py
+```
+
+The runner creates a new `results/state-event-e0/<timestamp>/` package with `evidence.json`, `report.json`, `report.md` and frozen copies of the relevant source, policy and case files. Existing output directories are refused. Inputs, injected evaluation times, actual consumer-instance identities, decisions, latest-state snapshots and generated command objects are retained. The commands are never published or written to a device. The small inspection capacity of two is an isolated stress-case setting; the deployed default remains 4096.
+
+Include that evidence in the whole-study evaluator, optionally alongside a saved command run:
+
+```powershell
+uv run python scripts/conformance.py --data-evidence results/state-event-e0/YOUR_RUN/evidence.json
+# To combine with existing command evidence, also supply --run PATH_TO_COMMAND_RUN
+```
+
+`config/architecture/state-event-policy.json` pins the selected policy and `config/scenarios/state-events.json` pins 31 cases and their expected outcomes. The offline checker does not import the runtime implementation to compute its expected answers: it compares retained decisions to this independent case oracle. Changed inputs, contradictory snapshots, unexpected commands, missing sequence diagnostics, reused command IDs and unrecorded consumer-instance changes are checked. Missing evidence stays unknown. An expected refusal of an injected invalid input is a passing consumer test, not a claim that the invalid input conforms to its contract.
+
+### State policy and its boundary
+
+The selected streams are conveyor speed setpoint, rejection count and last rejected bottle, as consumed by the decision service. Valid good-quality samples can update a stream only with a strictly newer source timestamp. Equal-time identical values are duplicates; equal-time changed values are conflicts. Neither can overwrite the current value. Future, stale, out-of-order or bad-quality samples are ignored. State age is checked against the five-second profile: snapshots become stale when updates are missing and start unknown after a consumer is recreated. A stale snapshot retains its last known value with an explicit stale status; it is not a fresh observation.
+
+Existing SOSA state messages contain no publisher sequence or epoch. The implementation therefore applies this narrower timestamp policy; it cannot prove order across a publisher clock reset or authenticate a new source epoch. The publisher-restart case is an input marker followed by old/new timestamp samples, not a measured restart of a deployed publisher. The snapshot accessor is available to the runner; this change does not claim a new live Grafana freshness alarm or monitoring endpoint.
+
+### Inspection policy and its boundary
+
+An inspection's session/sequence ID binds its retained bottle ID, result and inspection time. A repeated retained event or a second inspection for the same retained session/bottle does not generate another command. A changed retained identity is refused explicitly. The observed sequence frontier advances within a retained source session. A fresh, unique event with an older/equal inspection time may still be processed when it arrives late: events do not inherit latest-state overwrite rules. A backwards sequence paired with a newer inspection time is refused as inconsistent source progression; wrap must use a new session. Late unique events are diagnosed separately and cannot move the frontier backwards. Source progress is tracked separately from command admission so an observed-but-refused delivery is not counted as a missing snapshot. A gap emits a missing-sequence diagnostic; it does not establish how many physical bottles were affected.
+
+Freshness is strictly less than two seconds in this profile; deduplication entries are retained for the existing age-plus-ten-second interval. Capacity exhaustion refuses work without evicting live identities. Cases check the boundary and subsequent capacity recovery. Recreating a consumer clears its in-memory state: replay of a still-fresh inspection can create a new command ID. This is explicitly captured as the current limitation, not presented as durable deduplication or at-most-one physical effect across restarts. A changed source session is exercised as an input-identity case, not proof of a device restart or an ordering relation between opaque sessions.
+
+The consumer report can pass while C05/C06 whole-family verdicts remain unknown. Broker replay/reconnect, real consumer/device restarts, complete sampled-event coverage and independent command/acknowledgement/rejection-counter reconciliation belong to the following recovery experiments. The new evidence is repeatable component-level conformance evidence, not a performance measurement, distributed timing result or universal proof.
+
+### Consumer changes and verification
+
+The state checks exposed an equal-timestamp conflict that could select two production modes. The consumer now refuses that conflict. Inspection checks add explicit diagnostics for identity mutation, sequence regression, gaps and bounded capacity; default retention and memory-only restart behaviour remain explicit. These service changes require rebuilding/redeploying `decision-agent-stub`; the offline replay/evaluator tools do not require a deployment. No new public message fields, dependency, listener or provider-specific API was introduced.
+
+
+### Verification — 5 November 2026
+
+The final retained package is `results/state-event-e0/2026-11-05T17-09-51-826752Z/`: 30 cases and 70 input/restart/snapshot steps passed their consumer checks. Its `combined-report/` includes the earlier two-iteration command package and correctly retains the whole-study unknown verdict. The intentionally corrupted `checker-counterexample.json` and `deliberate-violation-report/` demonstrate detection of a stale-state acceptance violation; they are labelled checker fixtures, not real observations.
+
+The full regression suite passed with 474 tests and 16 skips. Strict mypy passed for the six touched production/evaluator modules; Ruff and diff checks passed. Missing early observations were specifically tested to remain unknown rather than creating false later failures. Exact topic binding, source fingerprints, incomplete cases, duplicate evidence, stale-state contradictions and namespace changes have regression coverage.
+
+The updated `decision-agent-stub` image was built and deployed only to `kind-eirvah-edge/eirvah-edge` using its existing Recreate policy. Live source fingerprints matched the checkout and the service emitted its ready event; all 21 pods were Ready. This is a deployment smoke check, not a live execution of the 31 injected cases or proof of physical restart recovery. No commands were sent by the new replay runner. Changes remain uncommitted until requested.
+
+
+### Verification of the state/event extension — 5 November 2026
+
+The final retained package is `results/state-event-e0/2026-11-05T17-16-00-308555Z/`: 31 cases and 73 input/restart/snapshot steps passed their consumer checks. `combined-report/` includes the previous command package and correctly retains the whole-study unknown verdict. The deliberately corrupted `checker-counterexample.json` and `deliberate-violation-report/` demonstrate stale-state violation detection; they are checker fixtures, not runtime observations.
+
+The full regression suite passed with 475 tests and 16 skips. Strict mypy passed for the six touched production/evaluator modules; Ruff and diff checks passed. Missing initial observations remain unknown rather than producing a false later failure. Regressions also cover state conflicts, fresh unique late events, exact topic/command binding, source attribution, incomplete cases, duplicate evidence and sequence/capacity diagnostics.
+
+Only the decision consumer was rebuilt and redeployed to `kind-eirvah-edge/eirvah-edge` using its existing Recreate policy. Live source fingerprints matched the final checkout; all 21 pods were Ready. This is a deployment smoke check, not a live execution of the 31 injected cases or proof of physical restart recovery. The new replay runner sends no commands to brokers or devices.
+
+
+## Persistent observation identity and retained inspection recovery
+
+The deployed recovery profile extends the legacy memory-only consumer cases above. Each protocol adapter records a stable producer identity, a persistent connection epoch and per-node observation sequence on its own PVC. Conversion, contextualization and MQTT publication preserve this position. The boundary is the **adapter observation**, not an invented PLC sample sequence. The consumer retains accepted positions and rejects previous epochs after restart. A publisher restart does not create a source epoch. MQTT publisher client IDs include the pod hostname to avoid overlapping restart clients disconnecting one another.
+
+The Modbus simulator now commits an immutable inspection and its simulated process state before exposing it. HR60�69 supplies the oldest retained event; HR32 remains the legacy latest snapshot. The adapter republishes the FIFO head until the consumer commits durable ownership. A separately provisioned HMAC receipt binds that exact event ID and digest; the adapter verifies it before acknowledging the native head through HR70�74. Receipt fields alone are insufficient. Both HMAC holders, native access and Kubernetes administrators remain trusted; this does not authenticate arbitrary MQTT state publishers.
+
+Consumer ownership and the original command ID, target, payload and deadline are committed together. Restart/replay reuses that immutable command; the existing authoritative writer ledger prevents a completed command from starting again within retention. Unknown native outcomes are not retried as new commands. Expired inspections remain explicitly recorded and receipted without starting a late rejection. Thus event delivery coverage is separate from timely successful process actuation.
+
+The source retains pending events on `modbus-source-journal`; the consumer retains inbox/outbox/high-water state on `decision-recovery`. Adapter positions use their named observation-position PVCs. SQLite uses WAL and synchronous FULL. Services remain single authorities with Recreate placement. Source generation pauses at 4096 pending events rather than overwriting them; consumer command ownership refuses capacity above 128 pending requests. Protection assumes retained, SQLite-compatible storage and the declared 24-hour retention. Independent active replicas, PVC loss and exactly-once real-plant effect are not claimed.
+
+### Bounded live recovery case
+
+```powershell
+uv run python scripts/configure_actuation_security.py --context kind-eirvah-edge
+uv run python scripts/recovery_case.py --context kind-eirvah-edge
+```
+
+Ensure `actuation-security` has `inspection-receipt-key` before deploying the upgraded adapter and consumer. The configuration helper adds the missing key without rotating existing ingress/approval keys. Rebuild the three adapters, Modbus simulator, decision consumer and four state pipeline images together because the shared position metadata traverses the pipeline. Apply the base configuration and import the rebuilt `:local` images into the selected kind cluster before restarting those deployments. Do not delete existing command-ledger or recovery volumes.
+
+The runner requires one active consumer and broker and explicitly selected research targets. It controls only the conveyor and named research deployments (including temporary command-ingress suspension), retains volumes, temporarily disables random simulator jams, and restores desired conveyor controls, jam configuration and replica counts. It performs real adapter, publisher, consumer and source pod replacements, a broker outage, old-epoch injection, replay of a completed inspection, interruption of an owned pending command while command ingress is paused, and a forged receipt. Source-generated IDs are reconciled with durable ownership, immutable writer records and independently committed simulated rejection-counter effects. Native acknowledgements are not presented as measurements from a real plant.
+
+Each new output directory retains raw database snapshots, clock domains, pod/PVC identities, source hashes, non-secret source snapshots, commands, restoration status and an independently evaluated report. Collection uses authenticated `kubectl exec`, with no evidence HTTP listener. Five live checks supplement the 31 legacy replay cases. Missing records, a different clock domain without measured bounds, or incomplete restoration prevent a passing recovery verdict. These finite local checks do not make E1 scalability, E2 interoperability, E3 distributed placement or the entire study pass.
+
+The same `--targets` component mapping as the bounded command collector supports collection across Kubernetes-based private, public and hybrid deployments. Actual networking, secure key provisioning and storage topology must be configured there. Shared local clocks are not assumed across machines. Different clock domains require a later measured-clock extension; the current runner keeps those conclusions unknown.
+
+During local bring-up, the publisher's 100m and integration orchestrator's 200m CPU ceilings caused stale observations. Both baseline limits were increased to 500m after observing the saturation. This is an engineering prerequisite for the recovery rehearsal, not a scalability experiment or evidence for an HPA claim.
+
+To combine the retained consumer and live recovery evidence with a command capture:
+
+```powershell
+uv run python scripts/conformance.py --run PATH_TO_COMMAND_CAPTURE --data-evidence PATH_TO_LIVE_RUN/consumer-replay/evidence.json --recovery-evidence PATH_TO_LIVE_RUN/evidence.json
+```
+
+The five legacy limitation entries are replaced only by their independently evaluated live equivalents. Omitted or malformed recovery evidence cannot silently create a pass. Other unmet study obligations remain visible.
+
+
+### Live recovery verification � 6 November 2026
+
+The expanded run `results/live-recovery/2026-11-06T16-31-26-189840Z/` passed all five bounded live checks. Its 118 source-created inspections reconciled with 118 durable consumer records: 49 passed inspections, 8 completed rejections, 56 expired inspections and 5 refused commands. The eight completed rejections matched eight independently committed simulated native counter increments. No pending or unknown commands remained in the captured window. Expired/refused work was preserved explicitly; delivery coverage is not a claim that every failed bottle was rejected during outages.
+
+Adapter and publisher restarts, a source restart with retained counters/events, consumer restart, replay, broker outage and forged receipt were exercised. A separate pending inspection command was owned before command ingress was paused and the consumer restarted; recovery retained the original ID, payload and deadline and refused the expired request. Shared Linux clock-domain evidence was recorded for this local case. Original replica counts, simulator jam configuration and desired conveyor controls were restored, and all 21 pods were Ready afterwards.
+
+`report.md` contains the five live verdicts; `combined-report/report.md` combines these records with the 31 consumer cases and the previous bounded command capture. **C05 and C06 pass within this selected profile.** The full study remains unknown (three rule families pass, ten remain unknown), with no failed rule family in that combined report. Unperformed interoperability, mixed-flow/fault, distributed-placement and other evidence obligations remain separate. Earlier partial captures are retained and have not been relabelled as successful.
+
+Final validation: **500 tests passed, 16 skipped**; strict mypy passed for 19 selected runtime/evaluator modules; changed Python files passed Ruff; `git diff --check` passed; the base deployment passed Kubernetes server-side dry-run validation. These are local engineering results, not controlled scaling measurements or real-plant validation.

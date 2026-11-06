@@ -12,6 +12,7 @@ dependencies = [
     "structlog>=24.0",
     "python-ulid>=2.0",
     "eirvah-contracts",
+    "eirvah-controls",
     "eirvah-observability",
 ]
 

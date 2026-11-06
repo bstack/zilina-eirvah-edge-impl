@@ -1,11 +1,13 @@
 """SSN/SOSA observation model — replaces TelemetryPayload as the MQTT wire format."""
+
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
-from eirvah_contracts.signals import Quality, SignalValue
+from eirvah_contracts.signals import Quality, SignalValue, SourcePosition
 
 _CONTEXT = {
     "sosa": "http://www.w3.org/ns/sosa/",
@@ -23,17 +25,18 @@ class SOSAObservation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    made_by_sensor: str           # eirvah: URI e.g. "eirvah:TorqueSensor01"
+    made_by_sensor: str  # eirvah: URI e.g. "eirvah:TorqueSensor01"
     has_feature_of_interest: str  # eirvah: URI e.g. "eirvah:Capper"
-    observed_property: str        # eirvah: URI e.g. "eirvah:Torque"
+    observed_property: str  # eirvah: URI e.g. "eirvah:Torque"
     has_simple_result: SignalValue
     result_time: datetime
     unit: str
     quality: Quality
+    position: SourcePosition | None = None
     correlation_id: str
 
-    def to_jsonld(self) -> dict:
-        return {
+    def to_jsonld(self) -> dict[str, Any]:
+        doc: dict[str, Any] = {
             "@context": _CONTEXT,
             "@type": "sosa:Observation",
             "sosa:madeBySensor": {"@id": self.made_by_sensor},
@@ -46,12 +49,19 @@ class SOSAObservation(BaseModel):
             "eirvah:correlationId": self.correlation_id,
         }
 
+        if self.position is not None:
+            doc["eirvah:position"] = self.position.model_dump(mode="json")
+        return doc
+
     def get_value(self) -> SignalValue:
         return self.has_simple_result
 
     @classmethod
-    def from_jsonld(cls, doc: dict) -> "SOSAObservation":
+    def from_jsonld(cls, doc: dict[str, Any]) -> SOSAObservation:
         return cls(
+            position=SourcePosition.model_validate(doc["eirvah:position"])
+            if doc.get("eirvah:position") is not None
+            else None,
             made_by_sensor=doc["sosa:madeBySensor"]["@id"],
             has_feature_of_interest=doc["sosa:hasFeatureOfInterest"]["@id"],
             observed_property=doc["sosa:observedProperty"]["@id"],

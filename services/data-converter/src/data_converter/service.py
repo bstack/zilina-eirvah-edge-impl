@@ -52,6 +52,7 @@ def apply_conversion(
     if rule.offset is not None:
         value = float(value) + rule.offset
     return NormalizedSignalEnvelope(
+        position=raw.position,
         node_id=raw.node_id,
         value=value,
         value_type=rule.value_type,

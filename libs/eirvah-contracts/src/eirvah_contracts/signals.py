@@ -5,11 +5,19 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 SignalValueType = Literal["double", "int64", "bool", "string"]
 Quality = Literal["good", "uncertain", "bad"]
 SignalValue = float | int | bool | str
+
+
+class SourcePosition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+    producer: str = Field(min_length=1, max_length=512)
+    epoch: int = Field(ge=1)
+    sequence: int = Field(ge=1)
+    boundary: Literal["adapter"] = "adapter"
 
 
 class RawSignalEnvelope(BaseModel):
@@ -22,6 +30,7 @@ class RawSignalEnvelope(BaseModel):
     value: SignalValue
     value_type: SignalValueType
     quality: Quality
+    position: SourcePosition | None = None
     source_timestamp: datetime
     server_timestamp: datetime
     received_at: datetime
@@ -37,5 +46,6 @@ class NormalizedSignalEnvelope(BaseModel):
     value_type: SignalValueType
     unit: str
     quality: Quality
+    position: SourcePosition | None = None
     source_timestamp: datetime
     received_at: datetime

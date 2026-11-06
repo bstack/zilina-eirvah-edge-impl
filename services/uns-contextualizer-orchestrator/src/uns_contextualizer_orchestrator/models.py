@@ -40,6 +40,7 @@ class PipelineContext:
         assert self.normalized is not None, "normalized must be set"
         assert self.contextualized is not None, "contextualized must be set"
         return PublishRequest(
+            position=self.raw.position,
             uns_topic=self.contextualized.uns_topic,
             correlation_id=self.correlation_id,
             value=self.normalized.value,

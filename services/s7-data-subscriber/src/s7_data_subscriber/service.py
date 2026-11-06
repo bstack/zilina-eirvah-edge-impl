@@ -1,4 +1,5 @@
 """S7 TCP data subscriber — polls DB1+DB2, publishes to uns.ingress.raw."""
+
 from __future__ import annotations
 
 import asyncio
@@ -13,8 +14,9 @@ import yaml
 from eirvah_bus.client import BusClient
 from eirvah_bus.request_reply import BUS_HEADER_CORRELATION_ID
 from eirvah_contracts.envelope import NATSEnvelope
-from eirvah_contracts.signals import RawSignalEnvelope, SignalValueType
+from eirvah_contracts.signals import RawSignalEnvelope, SignalValueType, SourcePosition
 from eirvah_contracts.ulid import generate_correlation_id
+from eirvah_controls.recovery import ProducerPositions
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_gauge
@@ -93,6 +95,7 @@ class SubscriberRuntime:
     def __init__(self, settings: SubscriberSettings) -> None:
         self._settings = settings
         self._bus: BusClient | None = None
+        self._positions: ProducerPositions | None = None
         self._ready = False
         self._connection_state = make_gauge(
             "ingress_connection_state",
@@ -104,6 +107,7 @@ class SubscriberRuntime:
         return self._ready
 
     async def run(self) -> None:
+        self._positions = ProducerPositions(self._settings.position_path, self._settings.source_id)
         cfg = load_s7_unit_map(self._settings.unit_map_path)
         self._bus = BusClient(servers=self._settings.nats_servers, name="s7-data-subscriber")
         await self._bus.connect()
@@ -123,6 +127,8 @@ class SubscriberRuntime:
         interval = cfg.poll_interval_ms / 1000.0
         client = S7Client()
         await asyncio.to_thread(client.connect, cfg.host, cfg.rack, cfg.slot, cfg.port)
+        if self._positions is not None:
+            self._positions.begin_epoch()
         self._ready = True
         self._connection_state.labels(ingress="s7", state="connected").set(1)
         self._connection_state.labels(ingress="s7", state="disconnected").set(0)
@@ -154,6 +160,14 @@ class SubscriberRuntime:
 
     async def _publish(self, envelope: NATSEnvelope) -> None:
         assert self._bus is not None
+        if self._positions is not None:
+            raw = RawSignalEnvelope.model_validate(envelope.payload)
+            position = SourcePosition.model_validate(self._positions.next(raw.node_id))
+            envelope = envelope.model_copy(
+                update={
+                    "payload": raw.model_copy(update={"position": position}).model_dump(mode="json")
+                }
+            )
         headers = {BUS_HEADER_CORRELATION_ID: envelope.correlation_id}
         await self._bus.nc.publish(
             _NATS_SUBJECT,

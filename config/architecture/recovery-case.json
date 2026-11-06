@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "id": "bounded-live-c05-c06-recovery-v1",
+  "scope": "Finite local Kubernetes recovery checks for the selected adapter observation streams and retained simulated inspections. No universal conformance or real-plant safety claim.",
+  "state_boundary": "adapter",
+  "inspection_retention_s": 86400,
+  "inspection_max_age_s": 2.0,
+  "outage_seconds": 6,
+  "topics": {
+    "opcua": "uniza/zilina/factory1/line_a/bottler/temperature_sensor_01/temperature",
+    "modbus": "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+    "s7": "uniza/zilina/factory1/line_a/capper/motor_01/speed_setpoint"
+  },
+  "receipt_topic": "uniza/zilina/factory1/line_a/inspector/inspector_01/inspection_receipt",
+  "inspection_topic": "uniza/zilina/factory1/line_a/inspector/inspector_01/bottle_inspection",
+  "guarantees": [
+    "stable-volume fenced adapter epochs",
+    "durable inspection ownership before receipt",
+    "same command identity and deadline after consumer restart",
+    "source event retention through consumer/source/broker restart",
+    "bounded native acknowledgement and simulated counter reconciliation"
+  ],
+  "assumptions": [
+    "one active authority per stateful role",
+    "persistent volumes retained and SQLite-compatible",
+    "trusted native device and broker boundary",
+    "all clock-dependent checks require recorded shared local clock or separate measured bounds",
+    "finite run is shorter than event and command retention; bottle IDs do not wrap within the capture"
+  ]
+}

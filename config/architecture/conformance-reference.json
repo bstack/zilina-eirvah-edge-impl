@@ -152,6 +152,16 @@
         "executor",
         "operational_telemetry",
         "observer"
+      ],
+      [
+        "namespace",
+        "event",
+        "adapter"
+      ],
+      [
+        "adapter",
+        "event",
+        "physical"
       ]
     ],
     "role_layers": {

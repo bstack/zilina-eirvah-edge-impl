@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 
 import aiomqtt
 import structlog
@@ -26,6 +27,7 @@ SUBJECT = "uns.work.publish"
 
 def build_sosa_observation(req: PublishRequest) -> SOSAObservation:
     return SOSAObservation(
+        position=req.position,
         made_by_sensor=req.sensor_uri,
         has_feature_of_interest=req.feature_uri,
         observed_property=req.property_uri,
@@ -71,7 +73,8 @@ class MqttPublisherWorker:
                     port=self._settings.mqtt_port,
                     username=self._settings.mqtt_username,
                     password=self._settings.mqtt_password,
-                    identifier=self._settings.mqtt_client_id,
+                    identifier=self._settings.mqtt_client_id
+                    + ("-" + os.environ["HOSTNAME"] if os.environ.get("HOSTNAME") else ""),
                 ) as client:
                     self._mqtt_client = client
                     self._mqtt_ready = True

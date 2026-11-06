@@ -46,7 +46,11 @@ def refresh_permissions(secret: dict[str, Any]) -> bool:
 def build_secret(namespace: str) -> dict[str, Any]:
     config = yaml.safe_load((ROOT / "deploy/k3s/base/rabbitmq/configmap.yaml").read_text())
     definitions = json.loads(config["data"]["definitions.json"])
-    values = {"ingress-key": secrets.token_urlsafe(48), "approval-key": secrets.token_urlsafe(48)}
+    values = {
+        "ingress-key": secrets.token_urlsafe(48),
+        "approval-key": secrets.token_urlsafe(48),
+        "inspection-receipt-key": secrets.token_urlsafe(48),
+    }
     queue = r"eirvah\.actuation\.requests"
     results = r"eirvah\.actuation\.results"
     for user, key in (
@@ -107,7 +111,12 @@ def main() -> None:
             raise SystemExit(
                 "Existing actuation-security secret is incomplete; inspect it before replacing it."
             )
-        if refresh_permissions(existing_secret):
+        receipt_added = "inspection-receipt-key" not in existing
+        if receipt_added:
+            existing["inspection-receipt-key"] = base64.b64encode(
+                secrets.token_urlsafe(48).encode()
+            ).decode()
+        if refresh_permissions(existing_secret) or receipt_added:
             subprocess.run(
                 [*prefix, "replace", "-f", "-"],
                 input=json.dumps(existing_secret),
@@ -116,7 +125,7 @@ def main() -> None:
                 check=True,
             )
             print(
-                "Refreshed broker permissions; keys and account passwords retained. Restart RabbitMQ to load definitions."
+                "Ensured recovery receipt key and broker permissions; existing keys and passwords retained. Restart RabbitMQ to load definitions."
             )
         else:
             print("Existing actuation-security secret retained; no credentials rotated.")

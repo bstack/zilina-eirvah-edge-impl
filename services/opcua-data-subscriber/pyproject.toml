@@ -13,6 +13,7 @@ dependencies = [
     "structlog>=24.0",
     "uvicorn>=0.30",
     "eirvah-contracts",
+    "eirvah-controls",
     "eirvah-bus",
     "eirvah-observability",
 ]

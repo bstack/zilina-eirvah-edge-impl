@@ -6,15 +6,22 @@ import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 
+import aiomqtt
 import structlog
 import uvicorn
 import yaml
 from eirvah_bus.client import BusClient
 from eirvah_bus.request_reply import BUS_HEADER_CORRELATION_ID
+from eirvah_contracts.authorization import require_key
 from eirvah_contracts.envelope import NATSEnvelope
-from eirvah_contracts.inspection import BottleInspection
-from eirvah_contracts.signals import RawSignalEnvelope, SignalValueType
+from eirvah_contracts.inspection import (
+    InspectionReceipt,
+    decode_inspection,
+    verify_receipt,
+)
+from eirvah_contracts.signals import RawSignalEnvelope, SignalValueType, SourcePosition
 from eirvah_contracts.ulid import generate_correlation_id
+from eirvah_controls.recovery import ProducerPositions
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_gauge
@@ -41,24 +48,6 @@ class RegisterMapConfig(BaseModel):
     poll_interval_ms: int = 500
     registers: list[RegisterConfig]
     inspection_address: int | None = None
-
-
-def decode_inspection(registers: list[int]) -> BottleInspection | None:
-    if len(registers) != 10 or any(type(v) is not int or not 0 <= v <= 65535 for v in registers):
-        raise ValueError("invalid inspection snapshot")
-    session = sum(registers[i] << (48 - i * 16) for i in range(4))
-    sequence, bottle, status = registers[4:7]
-    if status == 0:
-        return None
-    if status not in (1, 2) or session == 0 or sequence == 0:
-        raise ValueError("invalid inspection identity/status")
-    millis = (registers[7] << 32) | (registers[8] << 16) | registers[9]
-    return BottleInspection(
-        inspection_id=f"{session:016x}:{sequence:04x}",
-        bottle_id=bottle,
-        passed=status == 1,
-        inspected_at=datetime.fromtimestamp(millis / 1000, UTC),
-    )
 
 
 def load_register_map(path: Path) -> RegisterMapConfig:
@@ -108,6 +97,7 @@ class SubscriberRuntime:
     def __init__(self, settings: SubscriberSettings) -> None:
         self._settings = settings
         self._bus: BusClient | None = None
+        self._positions: ProducerPositions | None = None
         self._ready = False
         self._last_inspection_id: str | None = None
         self._connection_state = make_gauge(
@@ -120,6 +110,62 @@ class SubscriberRuntime:
         return self._ready
 
     async def run(self) -> None:
+        if self._settings.durable_inspections:
+            require_key(self._settings.receipt_key.get_secret_value())
+            async with asyncio.TaskGroup() as tasks:
+                tasks.create_task(self._produce())
+                tasks.create_task(self._receipts())
+        else:
+            await self._produce()
+
+    async def _receipts(self) -> None:
+        cfg = load_register_map(self._settings.register_map_path)
+        while True:
+            try:
+                async with aiomqtt.Client(
+                    hostname=self._settings.mqtt_host,
+                    port=self._settings.mqtt_port,
+                    username=self._settings.mqtt_username,
+                    password=self._settings.mqtt_password,
+                ) as mqtt:
+                    await mqtt.subscribe(self._settings.receipt_topic, qos=1)
+                    async for message in mqtt.messages:
+                        try:
+                            receipt = InspectionReceipt.model_validate_json(bytes(message.payload))
+                            async with AsyncModbusTcpClient(cfg.host, port=cfg.port) as native:
+                                result = await native.read_holding_registers(
+                                    60, count=10, slave=cfg.unit_id
+                                )
+                                if result.isError():
+                                    raise ConnectionError("source head unavailable")
+                                head = decode_inspection(result.registers)
+                                if head is None:
+                                    continue
+                                verify_receipt(
+                                    receipt, head, self._settings.receipt_key.get_secret_value()
+                                )
+                                session, seq = head.inspection_id.split(":")
+                                bits = int(session, 16)
+                                values = [
+                                    *[(bits >> shift) & 65535 for shift in (48, 32, 16, 0)],
+                                    int(seq, 16),
+                                ]
+                                ack = await native.write_registers(
+                                    70, values=values, slave=cfg.unit_id
+                                )
+                                if ack.isError():
+                                    raise ConnectionError("source receipt write failed")
+                                _log.info(
+                                    "inspection_receipt_forwarded", inspection_id=head.inspection_id
+                                )
+                        except Exception as exc:
+                            _log.debug("inspection_receipt_deferred", error_type=type(exc).__name__)
+            except Exception as exc:
+                _log.warning("inspection_receipt_disconnected", error_type=type(exc).__name__)
+                await asyncio.sleep(1)
+
+    async def _produce(self) -> None:
+        self._positions = ProducerPositions(self._settings.position_path, self._settings.source_id)
         cfg = load_register_map(self._settings.register_map_path)
         self._bus = BusClient(servers=self._settings.nats_servers, name="modbus-data-subscriber")
         await self._bus.connect()
@@ -146,6 +192,8 @@ class SubscriberRuntime:
         count = max(addresses) - start + 1
 
         async with AsyncModbusTcpClient(cfg.host, port=cfg.port) as client:
+            if self._positions is not None:
+                self._positions.begin_epoch()
             self._ready = True
             self._connection_state.labels(ingress="modbus", state="connected").set(1)
             self._connection_state.labels(ingress="modbus", state="disconnected").set(0)
@@ -175,7 +223,15 @@ class SubscriberRuntime:
                     await self._publish(envelope)
                 if cfg.inspection_address is not None:
                     offset = cfg.inspection_address - start
-                    inspection = decode_inspection(result.registers[offset : offset + 10])
+                    if self._settings.durable_inspections:
+                        retained = await client.read_holding_registers(
+                            60, count=10, slave=cfg.unit_id
+                        )
+                        if retained.isError():
+                            raise ConnectionError("retained inspection unavailable")
+                        inspection = decode_inspection(retained.registers)
+                    else:
+                        inspection = decode_inspection(result.registers[offset : offset + 10])
                     if inspection is not None:
                         if inspection.inspection_id != self._last_inspection_id:
                             if self._last_inspection_id is not None:
@@ -213,6 +269,14 @@ class SubscriberRuntime:
 
     async def _publish(self, envelope: NATSEnvelope) -> None:
         assert self._bus is not None
+        if self._positions is not None:
+            raw = RawSignalEnvelope.model_validate(envelope.payload)
+            position = SourcePosition.model_validate(self._positions.next(raw.node_id))
+            envelope = envelope.model_copy(
+                update={
+                    "payload": raw.model_copy(update={"position": position}).model_dump(mode="json")
+                }
+            )
         headers = {BUS_HEADER_CORRELATION_ID: envelope.correlation_id}
         await self._bus.nc.publish(
             _NATS_SUBJECT,

@@ -1,4 +1,5 @@
 """Settings for the S7 data subscriber."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -14,6 +15,8 @@ class SubscriberSettings(BaseSettings):
         extra="ignore",
     )
 
+    source_id: str = "s7-data-subscriber"
+    position_path: Path = Path("/var/lib/eirvah/positions.sqlite3")
     nats_servers: list[str] = ["nats://nats:4222"]
     unit_map_path: Path = Path("/etc/s7-data-subscriber/s7-unit-map.yaml")
     http_port: int = Field(default=8080, ge=1024, le=65535)

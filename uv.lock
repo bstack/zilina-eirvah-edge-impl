@@ -498,6 +498,7 @@ dependencies = [
     { name = "aio-pika" },
     { name = "aiomqtt" },
     { name = "eirvah-contracts" },
+    { name = "eirvah-controls" },
     { name = "eirvah-observability" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -510,6 +511,7 @@ requires-dist = [
     { name = "aio-pika", specifier = ">=9.0" },
     { name = "aiomqtt", specifier = ">=2.0" },
     { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
+    { name = "eirvah-controls", editable = "libs/eirvah-controls" },
     { name = "eirvah-observability", editable = "libs/eirvah-observability" },
     { name = "pydantic", specifier = ">=2.8" },
     { name = "pydantic-settings", specifier = ">=2.5" },
@@ -801,8 +803,10 @@ name = "modbus-data-subscriber"
 version = "0.0.0"
 source = { editable = "services/modbus-data-subscriber" }
 dependencies = [
+    { name = "aiomqtt" },
     { name = "eirvah-bus" },
     { name = "eirvah-contracts" },
+    { name = "eirvah-controls" },
     { name = "eirvah-observability" },
     { name = "nats-py" },
     { name = "pydantic" },
@@ -815,8 +819,10 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "aiomqtt", specifier = ">=2.0" },
     { name = "eirvah-bus", editable = "libs/eirvah-bus" },
     { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
+    { name = "eirvah-controls", editable = "libs/eirvah-controls" },
     { name = "eirvah-observability", editable = "libs/eirvah-observability" },
     { name = "nats-py", specifier = ">=2.7" },
     { name = "pydantic", specifier = ">=2.8" },
@@ -832,6 +838,7 @@ name = "modbus-simulator"
 version = "0.0.0"
 source = { editable = "services/modbus-simulator" }
 dependencies = [
+    { name = "eirvah-contracts" },
     { name = "eirvah-controls" },
     { name = "eirvah-observability" },
     { name = "pydantic" },
@@ -843,6 +850,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
     { name = "eirvah-controls", editable = "libs/eirvah-controls" },
     { name = "eirvah-observability", editable = "libs/eirvah-observability" },
     { name = "pydantic", specifier = ">=2.8" },
@@ -1123,6 +1131,7 @@ dependencies = [
     { name = "asyncua" },
     { name = "eirvah-bus" },
     { name = "eirvah-contracts" },
+    { name = "eirvah-controls" },
     { name = "eirvah-observability" },
     { name = "nats-py" },
     { name = "pydantic" },
@@ -1137,6 +1146,7 @@ requires-dist = [
     { name = "asyncua", specifier = ">=1.1" },
     { name = "eirvah-bus", editable = "libs/eirvah-bus" },
     { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
+    { name = "eirvah-controls", editable = "libs/eirvah-controls" },
     { name = "eirvah-observability", editable = "libs/eirvah-observability" },
     { name = "nats-py", specifier = ">=2.7" },
     { name = "pydantic", specifier = ">=2.8" },
@@ -1755,6 +1765,7 @@ source = { editable = "services/s7-data-subscriber" }
 dependencies = [
     { name = "eirvah-bus" },
     { name = "eirvah-contracts" },
+    { name = "eirvah-controls" },
     { name = "eirvah-observability" },
     { name = "nats-py" },
     { name = "pydantic" },
@@ -1769,6 +1780,7 @@ dependencies = [
 requires-dist = [
     { name = "eirvah-bus", editable = "libs/eirvah-bus" },
     { name = "eirvah-contracts", editable = "libs/eirvah-contracts" },
+    { name = "eirvah-controls", editable = "libs/eirvah-controls" },
     { name = "eirvah-observability", editable = "libs/eirvah-observability" },
     { name = "nats-py", specifier = ">=2.7" },
     { name = "pydantic", specifier = ">=2.8" },

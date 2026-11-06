@@ -155,6 +155,16 @@
         "executor",
         "operational_telemetry",
         "observer"
+      ],
+      [
+        "namespace",
+        "event",
+        "adapter"
+      ],
+      [
+        "adapter",
+        "event",
+        "physical"
       ]
     ],
     "role_layers": {
@@ -623,11 +633,12 @@
     {
       "id": "native-inspection",
       "kind": "event",
-      "model": "Ten-register inspection snapshot",
+      "model": "Retained ten-register inspection FIFO head",
       "wire_version": null,
       "binding_status": "partial",
       "sources": [
-        "libs/eirvah-controls/src/eirvah_controls/inspection.py"
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py",
+        "services/modbus-simulator/src/modbus_simulator/server.py"
       ],
       "note": "A refinement binding is documented here; complete receiver compatibility and policy checks remain pending."
     },
@@ -663,6 +674,29 @@
         "libs/eirvah-contracts/src/eirvah_contracts/authorization.py"
       ],
       "note": "HMAC-bound command contract implemented; end-to-end runtime conformance and recovery policies remain pending."
+    },
+    {
+      "id": "inspection-receipt",
+      "kind": "event",
+      "model": "InspectionReceipt",
+      "wire_version": "1.0",
+      "binding_status": "partial",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py"
+      ],
+      "note": "HMAC receipt binds the immutable event digest and consumer; native acknowledgement releases only that retained source event. This is delivery acknowledgement, not a process command."
+    },
+    {
+      "id": "native-inspection-receipt",
+      "kind": "event",
+      "model": "Retained inspection session and sequence acknowledgement",
+      "wire_version": null,
+      "binding_status": "partial",
+      "sources": [
+        "services/modbus-data-subscriber/src/modbus_data_subscriber/service.py",
+        "services/modbus-simulator/src/modbus_simulator/server.py"
+      ],
+      "note": "HR70..74 acknowledges the exact FIFO head after signed durable consumer receipt."
     }
   ],
   "channels": [
@@ -941,6 +975,20 @@
         "libs/eirvah-observability/src/eirvah_observability/logging.py"
       ],
       "note": "Available component logs; centralized collection and complete timed trace are not claimed."
+    },
+    {
+      "id": "mqtt-inspection-receipt",
+      "transport": "mqtt",
+      "address": "uniza/zilina/factory1/line_a/inspector/inspector_01/inspection_receipt",
+      "components": [
+        "decision-agent-stub",
+        "mosquitto",
+        "modbus-data-subscriber"
+      ],
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py"
+      ],
+      "envelope": "InspectionReceipt JSON; separate provisioned HMAC key"
     }
   ],
   "edges": [
@@ -1045,7 +1093,7 @@
         "modbus-read"
       ],
       "boundary": "native_acquisition",
-      "note": "Contract realized as a register snapshot before decoding; event is sampled, not durably queued."
+      "note": "Durable source FIFO head HR60..69 is republished until signed durable ownership receipt; HR32 remains latest snapshot for legacy consumers."
     },
     {
       "id": "inspection-integrate",
@@ -1356,6 +1404,39 @@
         "logs"
       ],
       "note": "Logical observation responsibility, not verified per-endpoint coverage. Metrics scraping and log availability have different coverage; complete timed traces remain missing."
+    },
+    {
+      "id": "inspection-receipt-publish",
+      "source": "decision",
+      "target": "state-namespace",
+      "flow": "event",
+      "contract": "inspection-receipt",
+      "channels": [
+        "mqtt-inspection-receipt"
+      ],
+      "note": "Delivery acknowledgement only; cannot initiate a process actuation."
+    },
+    {
+      "id": "inspection-receipt-consume",
+      "source": "state-namespace",
+      "target": "modbus-adapter",
+      "flow": "event",
+      "contract": "inspection-receipt",
+      "channels": [
+        "mqtt-inspection-receipt"
+      ],
+      "note": "Delivery acknowledgement only; cannot initiate a process actuation."
+    },
+    {
+      "id": "inspection-receipt-native",
+      "source": "modbus-adapter",
+      "target": "modbus-physical",
+      "flow": "event",
+      "contract": "native-inspection-receipt",
+      "channels": [
+        "modbus-read"
+      ],
+      "note": "Delivery acknowledgement only; cannot initiate a process actuation."
     }
   ],
   "controls": [
@@ -1683,8 +1764,8 @@
         "C06",
         "CR4"
       ],
-      "status": "open",
-      "description": "Polling latest inspection registers can miss events; restart clears in-memory deduplication."
+      "status": "bounded_recovery_checks_required",
+      "description": "Deployed profile retains source events and durable consumer ownership on PVCs. Finite live restart/outage evidence is evaluated separately; volume loss and unbounded delivery are outside the guarantee."
     },
     {
       "id": "trace_coverage",
@@ -1726,7 +1807,7 @@
     {
       "id": "automatic-rejection",
       "input": "Modbus inspection event plus rejection counter and bottle feedback",
-      "decision": "Fresh failed inspection triggers one rejection request within in-memory policy",
+      "decision": "Fresh failed inspection is durably owned with one immutable command identity; expired recovery is recorded without initiating a late write.",
       "target": "reject",
       "route": "decision-modbus",
       "feedback": "AMQP result plus MQTT last rejected bottle and counter"
@@ -1825,6 +1906,21 @@
       "High availability across independent writer replicas or ledger copies",
       "Duplicate protection after losing the ledger volume",
       "Automatic reconciliation of ambiguous physical outcomes"
+    ]
+  },
+  "recovery_policy": {
+    "state_boundary": "Adapter observation identity, persistent epoch and per-node sequence; native PLC sequence is not asserted.",
+    "state_storage": "Adapter PVC positions and consumer PVC accepted high-water marks",
+    "inspection_storage": "Source FIFO/state/effects and consumer inbox/outbox in SQLite WAL/FULL on separate PVCs",
+    "receipt_trust": "Independent receipt HMAC key; both holders and Kubernetes/native boundaries trusted; MQTT state authenticity is still outside this change.",
+    "retention_seconds": 86400,
+    "capacity": "Source pauses at 4096 pending events; consumer refuses new command ownership at 128 pending commands. No silent overwrite.",
+    "evidence": "scripts/recovery_case.py and scripts/recovery_checks.py",
+    "not_claimed": [
+      "Durability after PVC loss",
+      "Multiple active authorities with independent volumes",
+      "Exactly-once real-plant effect",
+      "Fresh actuation of expired inspections"
     ]
   }
 }

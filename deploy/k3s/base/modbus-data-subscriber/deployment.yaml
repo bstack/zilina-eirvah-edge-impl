@@ -5,6 +5,9 @@ metadata:
   labels: { app.kubernetes.io/name: modbus-data-subscriber }
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels: { app.kubernetes.io/name: modbus-data-subscriber }
   template:
@@ -14,19 +17,35 @@ spec:
         eirvah.uniza/scrape: "true"
         eirvah.uniza/scrape-port: "8080"
     spec:
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: modbus-data-subscriber
           image: modbus-data-subscriber:local
           imagePullPolicy: IfNotPresent
           env:
+            - name: MODBUS_DATA_SUBSCRIBER_DURABLE_INSPECTIONS
+              value: "true"
+            - name: MODBUS_DATA_SUBSCRIBER_RECEIPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: inspection-receipt-key
             - name: MODBUS_DATA_SUBSCRIBER_NATS_SERVERS
               value: '["nats://nats:4222"]'
           ports:
             - { name: http, containerPort: 8080 }
           volumeMounts:
+            - name: recovery-state
+              mountPath: /var/lib/eirvah
             - name: config
               mountPath: /etc/modbus-data-subscriber
               readOnly: true
+          startupProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet: { path: /readyz, port: 8080 }
             initialDelaySeconds: 5
@@ -39,6 +58,9 @@ spec:
             requests: { cpu: "25m", memory: "64Mi" }
             limits:   { cpu: "200m", memory: "128Mi" }
       volumes:
+        - name: recovery-state
+          persistentVolumeClaim:
+            claimName: modbus-observation-positions
         - name: config
           configMap:
             name: modbus-data-subscriber-config

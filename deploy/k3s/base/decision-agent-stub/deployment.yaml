@@ -15,11 +15,26 @@ spec:
     metadata:
       labels: { app.kubernetes.io/name: decision-agent-stub }
     spec:
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: decision-agent-stub
           image: decision-agent-stub:local
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: recovery-state
+              mountPath: /var/lib/eirvah
           env:
+            - name: DECISION_AGENT_STUB_INBOX_PATH
+              value: /var/lib/eirvah/consumer.sqlite3
+            - name: DECISION_AGENT_STUB_REQUIRE_POSITIONS
+              value: "true"
+            - name: DECISION_AGENT_STUB_RECEIPT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: actuation-security
+                  key: inspection-receipt-key
             - name: DECISION_AGENT_STUB_MQTT_HOST
               value: mosquitto
             - name: DECISION_AGENT_STUB_MQTT_USERNAME
@@ -48,3 +63,7 @@ spec:
           resources:
             requests: { cpu: "10m", memory: "64Mi" }
             limits:   { cpu: "100m", memory: "128Mi" }
+      volumes:
+        - name: recovery-state
+          persistentVolumeClaim:
+            claimName: decision-recovery

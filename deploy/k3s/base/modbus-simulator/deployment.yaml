@@ -5,6 +5,9 @@ metadata:
   labels: { app.kubernetes.io/name: modbus-simulator }
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
+    rollingUpdate: null
   selector:
     matchLabels: { app.kubernetes.io/name: modbus-simulator }
   template:
@@ -14,11 +17,19 @@ spec:
         eirvah.uniza/scrape: "true"
         eirvah.uniza/scrape-port: "8080"
     spec:
+      securityContext:
+        fsGroup: 65534
+        fsGroupChangePolicy: OnRootMismatch
       containers:
         - name: modbus-simulator
           image: modbus-simulator:local
           imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: recovery-state
+              mountPath: /var/lib/eirvah
           env:
+            - name: MODBUS_SIMULATOR_JOURNAL_PATH
+              value: /var/lib/eirvah/source.sqlite3
             - name: MODBUS_SIMULATOR_HOST
               value: "0.0.0.0"
             - name: MODBUS_SIMULATOR_PORT
@@ -32,6 +43,10 @@ spec:
           ports:
             - { name: modbus, containerPort: 5020 }
             - { name: http, containerPort: 8080 }
+          startupProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 36
           readinessProbe:
             httpGet: { path: /readyz, port: 8080 }
             initialDelaySeconds: 5
@@ -43,3 +58,7 @@ spec:
           resources:
             requests: { cpu: "25m", memory: "64Mi" }
             limits:   { cpu: "200m", memory: "128Mi" }
+      volumes:
+        - name: recovery-state
+          persistentVolumeClaim:
+            claimName: modbus-source-journal

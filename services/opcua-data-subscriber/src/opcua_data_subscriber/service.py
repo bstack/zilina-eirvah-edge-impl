@@ -14,8 +14,9 @@ from asyncua import Client
 from eirvah_bus.client import BusClient
 from eirvah_bus.request_reply import BUS_HEADER_CORRELATION_ID
 from eirvah_contracts.envelope import NATSEnvelope
-from eirvah_contracts.signals import Quality, RawSignalEnvelope, SignalValueType
+from eirvah_contracts.signals import Quality, RawSignalEnvelope, SignalValueType, SourcePosition
 from eirvah_contracts.ulid import generate_correlation_id
+from eirvah_controls.recovery import ProducerPositions
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
 from eirvah_observability.metrics import make_gauge
@@ -29,6 +30,7 @@ _log = structlog.get_logger("opcua-data-subscriber")
 # ---------------------------------------------------------------------------
 # Config models (loaded from opcua-node-list.yaml)
 # ---------------------------------------------------------------------------
+
 
 class NodeConfig(BaseModel):
     browse_names: list[str]
@@ -50,6 +52,7 @@ def load_node_list(path: Path) -> NodeListConfig:
 # ---------------------------------------------------------------------------
 # Pure helper functions (unit-testable without live connections)
 # ---------------------------------------------------------------------------
+
 
 def detect_value_type(value: Any) -> SignalValueType:
     if isinstance(value, bool):
@@ -110,6 +113,7 @@ def wrap_in_nats_envelope(raw: RawSignalEnvelope) -> NATSEnvelope:
 # OPC UA subscription handler
 # ---------------------------------------------------------------------------
 
+
 class _DataChangeHandler:  # asyncua calls datachange_notification by duck-typing
     def __init__(
         self,
@@ -143,10 +147,12 @@ class _DataChangeHandler:  # asyncua calls datachange_notification by duck-typin
 # Runtime
 # ---------------------------------------------------------------------------
 
+
 class SubscriberRuntime:
     def __init__(self, settings: SubscriberSettings) -> None:
         self._settings = settings
         self._bus: BusClient | None = None
+        self._positions: ProducerPositions | None = None
         self._ready = False
         self._connection_state = make_gauge(
             "ingress_connection_state",
@@ -158,6 +164,7 @@ class SubscriberRuntime:
         return self._ready
 
     async def run(self) -> None:
+        self._positions = ProducerPositions(self._settings.position_path, self._settings.source_id)
         cfg = load_node_list(self._settings.node_list_path)
         self._bus = BusClient(servers=self._settings.nats_servers, name="opcua-data-subscriber")
         await self._bus.connect()
@@ -186,10 +193,17 @@ class SubscriberRuntime:
                 alias_map[str(node.nodeid)] = node_cfg.alias
                 nodes_to_subscribe.append(node)
 
+            epoch = self._positions.begin_epoch() if self._positions is not None else None
+
+            async def on_message(envelope: NATSEnvelope) -> None:
+                if self._positions is not None and self._positions.epoch != epoch:
+                    raise RuntimeError("old OPC UA connection fenced")
+                await self._publish(envelope)
+
             handler = _DataChangeHandler(
                 alias_map=alias_map,
                 endpoint=cfg.endpoint,
-                on_message=self._publish,
+                on_message=on_message,
             )
             sub = await client.create_subscription(cfg.publishing_interval_ms, handler)
             await sub.subscribe_data_change(nodes_to_subscribe)
@@ -207,6 +221,14 @@ class SubscriberRuntime:
 
     async def _publish(self, envelope: NATSEnvelope) -> None:
         assert self._bus is not None
+        if self._positions is not None:
+            raw = RawSignalEnvelope.model_validate(envelope.payload)
+            position = SourcePosition.model_validate(self._positions.next(raw.node_id))
+            envelope = envelope.model_copy(
+                update={
+                    "payload": raw.model_copy(update={"position": position}).model_dump(mode="json")
+                }
+            )
         headers = {BUS_HEADER_CORRELATION_ID: envelope.correlation_id}
         await self._bus.nc.publish(
             "uns.ingress.raw",

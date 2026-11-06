@@ -8,6 +8,18 @@ from prometheus_client.registry import REGISTRY, CollectorRegistry
 
 class SimulatorMetrics:
     def __init__(self, registry: CollectorRegistry = REGISTRY) -> None:
+        self._outbox = make_gauge(
+            "inspection_outbox_pending",
+            "Unreceived retained source inspections",
+            labelnames=[],
+            registry=registry,
+        )
+        self._backpressure = make_gauge(
+            "inspection_source_backpressure",
+            "Simulation paused rather than dropping an inspection",
+            labelnames=[],
+            registry=registry,
+        )
         self._fill_level = make_gauge(
             "modbus_simulator_fill_level_percent",
             "Filler fill level (%).",
@@ -97,6 +109,10 @@ class SimulatorMetrics:
             labelnames=[],
             registry=registry,
         )
+
+    def set_recovery(self, pending: int, backpressure: int) -> None:
+        self._outbox.set(pending)
+        self._backpressure.set(backpressure)
 
     def set_inspection(self, inspected: int, failed: int, bottle: int) -> None:
         self._inspected.set(inspected)
