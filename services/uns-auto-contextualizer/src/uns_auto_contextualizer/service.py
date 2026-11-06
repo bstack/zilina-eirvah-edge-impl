@@ -35,7 +35,7 @@ PREFIX eirvah: <https://eirvah.uniza/ontology/>
 
 SELECT ?sensor ?feature ?property
        ?enterprise ?site ?area ?line ?cell ?equipment ?measurement
-       ?unit ?semanticType
+       ?unit ?semanticType ?valueType
 WHERE {
   ?sensor eirvah:nodeId ?nodeId .
   ?sensor sosa:isHostedBy ?feature .
@@ -49,6 +49,7 @@ WHERE {
   ?feature eirvah:cell ?cell .
   ?property eirvah:unit ?unit .
   ?property eirvah:semanticType ?semanticType .
+  ?property eirvah:valueType ?valueType .
 }
 """
 
@@ -66,10 +67,14 @@ def contextualize(
     normalized: NormalizedSignalEnvelope,
     graph: Graph,
 ) -> ContextualizeResult | None:
-    results = list(graph.query(_PREPARED_SPARQL, initBindings={"nodeId": Literal(normalized.node_id)}))
+    results = list(
+        graph.query(_PREPARED_SPARQL, initBindings={"nodeId": Literal(normalized.node_id)})
+    )
     if not results:
         return None
     row = cast(ResultRow, results[0])
+    if normalized.unit != str(row.unit) or normalized.value_type != str(row.valueType):
+        raise ValueError("normalized value does not match ontology unit/type")
     path = UNSPath(
         enterprise=str(row.enterprise),
         site=str(row.site),

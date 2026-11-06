@@ -30,6 +30,8 @@ class NATSEnvelope(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    schema_version: Literal["1.0"] = "1.0"
+
     correlation_id: str
     status: Status = "ok"
     payload: dict[str, Any] | None = None

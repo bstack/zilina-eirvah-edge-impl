@@ -25,6 +25,8 @@ import aiomqtt
 from control import build_command, send
 from e0_capture import Cluster, save
 from eirvah_contracts.inspection import BottleInspection, InspectionReceipt, inspection_digest
+from eirvah_contracts.observation import load_bindings
+from eirvah_contracts.sosa import SOSAObservation
 from eirvah_contracts.ulid import generate_correlation_id
 from pymodbus.client import AsyncModbusTcpClient
 from recovery_checks import PROFILE, check_recovery
@@ -441,13 +443,20 @@ class RecoveryRun:
         await self.scale("decision-agent-stub", 1)
         await self.wait(self.consumer, lambda x: x["db_id"] == consumer_data["db_id"])
         event = original["payload"]
-        payload = {
-            "sosa:resultTime": event["inspected_at"],
-            "sosa:hasSimpleResult": json.dumps(event),
-            "eirvah:quality": "good",
-            "eirvah:unit": "json",
-            "eirvah:correlationId": generate_correlation_id(),
-        }
+        binding = load_bindings(ROOT / "config/eirvah-line-a.jsonld")[
+            self.profile["inspection_topic"]
+        ]
+        payload = SOSAObservation(
+            value_type="string",
+            made_by_sensor=binding["sensor"],
+            has_feature_of_interest=binding["feature"],
+            observed_property=binding["property"],
+            has_simple_result=json.dumps(event),
+            result_time=datetime.fromisoformat(event["inspected_at"]),
+            unit="json",
+            quality="good",
+            correlation_id=generate_correlation_id(),
+        ).to_jsonld()
         await self.publish(self.profile["inspection_topic"], payload)
         await asyncio.sleep(2)
         final_consumer = await asyncio.to_thread(self.consumer)

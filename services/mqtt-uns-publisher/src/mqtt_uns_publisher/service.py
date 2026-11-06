@@ -28,6 +28,7 @@ SUBJECT = "uns.work.publish"
 def build_sosa_observation(req: PublishRequest) -> SOSAObservation:
     return SOSAObservation(
         position=req.position,
+        value_type=req.value_type,
         made_by_sensor=req.sensor_uri,
         has_feature_of_interest=req.feature_uri,
         observed_property=req.property_uri,

@@ -151,6 +151,6 @@ def test_recorded_controller_topics_and_versions_match_current_models() -> None:
         contracts["actuation-request"]["wire_version"]
         == ActuationRequest.model_fields["schema_version"].default
     )
-    assert contracts["canonical-state"]["wire_version"] is None
+    assert contracts["canonical-state"]["wire_version"] == "1.0"
     for scenario in m["scenarios"]:
         assert scenario["route"] in {r["id"] for r in m["required_routes"]}

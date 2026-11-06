@@ -4,3 +4,7 @@ resources:
   - pvc.yaml
   - deployment.yaml
   - service.yaml
+configMapGenerator:
+  - name: decision-observation-contracts
+    files:
+      - eirvah-line-a.jsonld=eirvah-line-a.jsonld

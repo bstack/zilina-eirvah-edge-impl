@@ -25,6 +25,8 @@ class RawSignalEnvelope(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    schema_version: Literal["1.0"] = "1.0"
+
     source_endpoint: str
     node_id: str
     value: SignalValue
@@ -40,6 +42,8 @@ class NormalizedSignalEnvelope(BaseModel):
     """Emitted by ``data-converter`` (the value has been unit-converted/scaled)."""
 
     model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
 
     node_id: str
     value: SignalValue

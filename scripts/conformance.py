@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
+from assurance_checks import check_assurance
 from data_conformance import check_data_evidence
 from eirvah_contracts.ulid import is_valid_correlation_id
 from eirvah_contracts.uns import parse_uns_topic
@@ -818,6 +819,7 @@ def evaluate(
     data_evidence: dict[str, Any] | None = None,
     recovery_evidence: dict[str, Any] | None = None,
     fault_evidence: dict[str, Any] | None = None,
+    assurance_evidence: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     checks = (
         check_structure(manifest, reference)
@@ -871,6 +873,23 @@ def evaluate(
             evidence=collection_errors,
         )
     )
+    if assurance_evidence is not None:
+        assurance, closed_no_write = check_assurance(assurance_evidence, records, commands)
+        replaced = {c["check"] for c in assurance}
+        checks = [c for c in checks if c["check"] not in replaced]
+        checks.extend(assurance)
+        for item in checks:
+            if (
+                item["check"] in ("C07.admission", "C08.deadline", "C09.initiations", "C09.binding")
+                and item["status"] == "unknown"
+                and item["evidence"]
+                and item["evidence"][0] in closed_no_write
+            ):
+                item["status"] = "pass"
+                item["scope"] = "verified_closed_capture_without_execution"
+                item["reason"] = (
+                    "Refused request has no admission, initiation or ledger record in the verified complete capture; the execution-only implication is satisfied without asserting a write"
+                )
     if commands:
         expected = {
             c["correlation_id"] for c in commands if isinstance(c.get("correlation_id"), str)
@@ -999,6 +1018,9 @@ def main() -> None:
     parser.add_argument(
         "--fault-evidence", type=Path, help="Retained bounded command-fault evidence.json"
     )
+    parser.add_argument(
+        "--assurance-evidence", type=Path, help="Retained standalone E0 assurance evidence.json"
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     output = args.output or ROOT / "results/conformance" / datetime.now(UTC).strftime(
@@ -1068,6 +1090,16 @@ def main() -> None:
         except (OSError, ValueError):
             fault_evidence = {}
             input_errors.append("fault evidence unavailable or malformed")
+    assurance_evidence = None
+    if args.assurance_evidence:
+        files.append(args.assurance_evidence)
+        try:
+            assurance_evidence = json.loads(args.assurance_evidence.read_text(encoding="utf-8"))
+            if not isinstance(assurance_evidence, dict):
+                raise ValueError("invalid assurance evidence")
+        except (OSError, ValueError):
+            assurance_evidence = {}
+            input_errors.append("assurance evidence unavailable or malformed")
     report = evaluate(
         manifest,
         reference,
@@ -1078,6 +1110,7 @@ def main() -> None:
         data_evidence=data_evidence,
         recovery_evidence=recovery_evidence,
         fault_evidence=fault_evidence,
+        assurance_evidence=assurance_evidence,
     )
     report["input_errors"] = input_errors
     files.extend(
@@ -1092,6 +1125,9 @@ def main() -> None:
             ROOT / "scripts/data_conformance.py",
             ROOT / "scripts/recovery_checks.py",
             ROOT / "scripts/fault_checks.py",
+            ROOT / "scripts/assurance_checks.py",
+            ROOT / "config/architecture/assurance-case.json",
+            ROOT / "config/architecture/contract-catalogue.json",
             ROOT / "config/architecture/command-fault-case.json",
             ROOT / "config/architecture/recovery-case.json",
             ROOT / "config/architecture/state-event-policy.json",

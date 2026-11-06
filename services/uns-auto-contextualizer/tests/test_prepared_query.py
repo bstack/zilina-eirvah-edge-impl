@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import patch
 
+from eirvah_contracts.observation import load_bindings
 from eirvah_contracts.signals import NormalizedSignalEnvelope
 from rdflib import Literal, URIRef
 from rdflib.plugins.sparql import processor
@@ -16,11 +17,15 @@ ONTOLOGY = Path(__file__).resolve().parents[3] / "config/eirvah-line-a.jsonld"
 
 def signal(node_id: str) -> NormalizedSignalEnvelope:
     now = datetime.now(UTC)
+    binding = next(
+        (b for b in load_bindings(ONTOLOGY).values() if b["node"] == node_id),
+        {"unit": "dimensionless", "value_type": "double"},
+    )
     return NormalizedSignalEnvelope(
         node_id=node_id,
         value=1.0,
-        value_type="double",
-        unit="dimensionless",
+        value_type=binding["value_type"],
+        unit=binding["unit"],
         quality="good",
         source_timestamp=now,
         received_at=now,
@@ -61,3 +66,13 @@ def test_updated_graph_is_still_queried() -> None:
     assert after is not None
     assert after.semantic_type == "updated.torque"
     assert after.uns_topic == before.uns_topic
+
+
+def test_contextualizer_rejects_units_that_disagree_with_the_ontology():
+    import pytest
+
+    graph = service.load_ontology(ONTOLOGY)
+    normalized = signal("Capper.TorqueSensor01").model_copy(update={"unit": "degC"})
+
+    with pytest.raises(ValueError, match="ontology unit/type"):
+        service.contextualize(normalized, graph)

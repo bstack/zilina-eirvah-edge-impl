@@ -23,9 +23,14 @@ spec:
           image: decision-agent-stub:local
           imagePullPolicy: IfNotPresent
           volumeMounts:
+            - name: observation-contracts
+              mountPath: /etc/decision-agent-stub
+              readOnly: true
             - name: recovery-state
               mountPath: /var/lib/eirvah
           env:
+            - name: DECISION_AGENT_STUB_OBSERVATION_CONTRACT_PATH
+              value: /etc/decision-agent-stub/eirvah-line-a.jsonld
             - name: DECISION_AGENT_STUB_INBOX_PATH
               value: /var/lib/eirvah/consumer.sqlite3
             - name: DECISION_AGENT_STUB_REQUIRE_POSITIONS
@@ -64,6 +69,9 @@ spec:
             requests: { cpu: "10m", memory: "64Mi" }
             limits:   { cpu: "100m", memory: "128Mi" }
       volumes:
+        - name: observation-contracts
+          configMap:
+            name: decision-observation-contracts
         - name: recovery-state
           persistentVolumeClaim:
             claimName: decision-recovery

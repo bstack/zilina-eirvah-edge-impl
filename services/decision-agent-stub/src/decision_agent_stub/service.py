@@ -14,6 +14,7 @@ import structlog
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.authorization import require_key
 from eirvah_contracts.inspection import BottleInspection, sign_receipt
+from eirvah_contracts.observation import load_bindings, validate_observation
 from eirvah_contracts.ulid import generate_correlation_id
 from eirvah_controls.recovery import ConsumerStore
 from eirvah_observability.execution import record_command
@@ -77,6 +78,11 @@ class DecisionAgentRuntime:
         self, settings: DecisionAgentSettings, *, registry: CollectorRegistry | None = None
     ) -> None:
         self._settings = settings
+        self._bindings = (
+            load_bindings(settings.observation_contract_path)
+            if settings.observation_contract_path is not None
+            else None
+        )
         self._rule = ProductionModeRule(settings)
         self._store: ConsumerStore | None = None
         self._receipt_event: BottleInspection | None = None
@@ -219,6 +225,8 @@ class DecisionAgentRuntime:
         self, topic: str, payload: dict[str, Any], now: datetime
     ) -> ActuationRequest | None:
         self._receipt_event = None
+        if self._bindings is not None:
+            validate_observation(topic, payload, self._bindings)
         self._report(self._rejections.expire(now))
         state_topic = topic in (
             self._settings.subscribe_topic,

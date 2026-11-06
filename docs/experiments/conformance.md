@@ -287,3 +287,41 @@ Four native effects in total matched four source counter increments, with no dup
 The combined report, using a fresh consumer replay plus the retained command and recovery packages, has **C01, C05, C06 and C10 passing within the selected profile**, nine remaining rule families unknown and no failing rule family. The full study remains unknown. Mixed-flow congestion (C11), interoperability and distributed evaluation are still separate obligations; neither the source effect audit nor the pre-restart journal prefix establishes a real-plant exactly-once guarantee.
 
 Final checks passed: **525 tests, 16 skipped**, strict mypy for the four new/updated evaluator-runner modules, Ruff and `git diff --check`. No production service source change or cluster rebuild was needed; the live experiment used temporary configuration around the existing writer image.
+
+
+## Standalone E0 assurance: contracts, admission and evidence coverage
+
+The selected local profile adds explicit checks for C02 (runtime bypass), C03 (contract compatibility and meaning), C07 (admission), C08 (expiry), C09 (identity and retained history) and C12 (capture coverage). These are bounded E0 checks, not universal conformance.
+
+`config/architecture/contract-catalogue.json` binds contracts to versions, flow kinds, sources and receivers. Internal envelopes emit version 1.0 and reject explicitly unsupported versions; an omitted internal version retains the documented v1 compatibility default. Public SOSA observations require explicit version and value type. Native mappings have catalogue versions without inventing version fields in PLC registers.
+
+Before acting, the decision receiver validates namespace topic, sensor, feature, property, unit, value type, timestamp and inspection meaning against its deployed ontology. The contextualizer also rejects normalized unit/type mismatches. This validates declared meaning, not arbitrary MQTT publisher authenticity. Administrators, native-device access and provisioned HMAC-key holders remain trusted.
+
+### Running the selected profile
+
+```powershell
+uv run python scripts/e0_capture.py --context kind-eirvah-edge --assurance
+```
+
+Rebuild the shared-contract consumers together: three protocol adapters, Modbus simulator, four state-pipeline workers, four command actors and decision consumer. Apply the decision observation-contract ConfigMap/mount. Preserve ledger/recovery PVCs. The converter CPU limit is now 500m after its previous 100m ceiling caused stale observations; this is engineering preparation, not an E1 result. The standalone contextualizer load generator now derives units and types from the ontology.
+
+The capture exercises unsigned, tampered, wrong-writer, expired and envelope-mismatched direct writer requests. Evidence checks rejection, absence of admission/ledger/native initiation, and unchanged selected native feedback. Keys and operative approval signatures are never retained. Automatic decisions and random jams are temporarily paused/disabled and restored afterwards. Native snapshots select available test bottles while the durable inspection consumer is paused; this is setup, not E2 interoperability evidence.
+
+C12 checks actor-journal sequence fences, raw/calibrated record correspondence, clock bounds, exact submitted/observed command IDs, pod/image/config/PVC identities, deployed source hashes and restoration. Incomplete or unrelated evidence cannot close another run's unknowns. Complete no-write evidence allows a verified refusal to satisfy an execution-only admission/deadline implication without claiming a write occurred.
+
+Production SQLite ledger checks use an isolated results directory and injected times before, exactly at and after the declared 24-hour retention boundary, plus preparing/started/completed recovery and stale-token fencing. This is an accelerated component check combined with bounded live evidence, **not a 24-hour soak or complete lifetime history**. Live identities and recovery volumes are preserved.
+
+```powershell
+uv run python scripts/conformance.py --run PATH_TO_CAPTURE/run --assurance-evidence PATH_TO_CAPTURE/assurance-evidence.json --data-evidence PATH_TO_RECOVERY/consumer-replay/evidence.json --recovery-evidence PATH_TO_RECOVERY/evidence.json --fault-evidence PATH_TO_FAULT/evidence.json
+```
+
+Independent checkers evaluate retained evidence rather than trusting runner success. C04 interoperability, C11 mixed-flow/congestion and C13 distributed placement remain separate obligations.
+
+
+### Standalone assurance verification - 6 November 2026
+
+The bounded capture `results/e0-capture/2026-11-06T20-28-20-218466Z/` passed its local case with 102 execution records and 14 submissions, including five direct-writer negative cases. Its contract, bypass, retention and capture-coverage checks pass within the selected profile. The new public-wire contracts were also exercised in fresh recovery and fault reruns: `results/live-recovery/2026-11-06T20-34-40-215679Z/` passed all five recovery checks; `results/command-faults/2026-11-06T20-41-07-566450Z/` passed all six fault checks.
+
+The combined report at `results/conformance/2026-11-06-final-standalone-assurance/report.md` records ten passing rule families, three unknown and no failed family. C02, C03, C07, C08, C09 and C12 now pass in this bounded local profile. C04, C11 and C13 remain unknown because interoperability, mixed-flow/congestion and distributed-placement experiments have not been supplied. The study-wide verdict therefore remains unknown. Historical partial captures are retained unchanged.
+
+Validation: 563 tests passed and 16 skipped; strict mypy passed for 16 changed/related modules; changed Python files passed Ruff; `git diff --check` and Kubernetes server-side deployment dry run passed. Recovery/fault restoration was confirmed and all 21 pods were Ready. The retention boundary was checked with injected time, not a 24-hour live soak. Code remains uncommitted until requested.

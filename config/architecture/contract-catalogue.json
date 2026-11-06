@@ -1,0 +1,204 @@
+{
+  "schema_version": "1.0",
+  "id": "selected-e0-contracts-v1",
+  "scope": "Selected local business, native mapping and observation contracts; instrumentation bindings are pinned, not a claim of complete monitoring.",
+  "compatibility": {
+    "internal": "v1 emitted explicitly; omitted schema_version retains the existing v1 compatibility default; other versions rejected",
+    "public_observation": "explicit eirvah:schemaVersion and eirvah:valueType required by the deployed consumer"
+  },
+  "contracts": [
+    {
+      "id": "native-state",
+      "version": "1.0",
+      "flow": "industrial_state",
+      "model": "Protocol-specific measurement",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "modbus-adapter",
+        "opcua-adapter",
+        "s7-adapter"
+      ]
+    },
+    {
+      "id": "raw-state",
+      "version": "1.0",
+      "flow": "industrial_state",
+      "model": "RawSignalEnvelope",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "integration"
+      ]
+    },
+    {
+      "id": "canonical-state",
+      "version": "1.0",
+      "flow": "industrial_state",
+      "model": "SOSAObservation",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/sosa.py"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "decision",
+        "state-namespace"
+      ]
+    },
+    {
+      "id": "inspection",
+      "version": "1.0",
+      "flow": "event",
+      "model": "BottleInspection",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py"
+      ],
+      "version_binding": "message version",
+      "receivers": [
+        "decision",
+        "state-namespace"
+      ]
+    },
+    {
+      "id": "actuation-request",
+      "version": "1.0",
+      "flow": "command",
+      "model": "ActuationRequest",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/actuation.py"
+      ],
+      "version_binding": "message version",
+      "receivers": [
+        "command-namespace"
+      ]
+    },
+    {
+      "id": "actuation-outcome",
+      "version": "1.0",
+      "flow": "event",
+      "model": "ActuationApproveResult | ActuationRejectResult | ActuationPendingResult | ActuationUnknownResult",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/actuation.py"
+      ],
+      "version_binding": "message version",
+      "receivers": [
+        "decision",
+        "manual-decision",
+        "outcome-namespace"
+      ]
+    },
+    {
+      "id": "native-write",
+      "version": "1.0",
+      "flow": "command",
+      "model": "Native target operation",
+      "sources": [
+        "config/native-actuation-targets.yaml"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "modbus-physical",
+        "opcua-physical",
+        "s7-physical"
+      ]
+    },
+    {
+      "id": "observations",
+      "version": "1.0",
+      "flow": "operational_telemetry",
+      "model": "Prometheus metrics and structured logs",
+      "sources": [
+        "deploy/k3s/base/prometheus/configmap.yaml"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "observer"
+      ]
+    },
+    {
+      "id": "native-inspection",
+      "version": "1.0",
+      "flow": "event",
+      "model": "Retained ten-register inspection FIFO head",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py",
+        "services/modbus-simulator/src/modbus_simulator/server.py"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "modbus-adapter"
+      ]
+    },
+    {
+      "id": "raw-inspection",
+      "version": "1.0",
+      "flow": "event",
+      "model": "BottleInspection JSON string inside RawSignalEnvelope",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "integration"
+      ]
+    },
+    {
+      "id": "authenticated-command",
+      "version": "1.0",
+      "flow": "command",
+      "model": "AuthenticatedRequest",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/authorization.py"
+      ],
+      "version_binding": "message version",
+      "receivers": [
+        "admission"
+      ]
+    },
+    {
+      "id": "approved-command",
+      "version": "1.0",
+      "flow": "command",
+      "model": "ApprovedWriteRequest",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/authorization.py"
+      ],
+      "version_binding": "message version",
+      "receivers": [
+        "writer"
+      ]
+    },
+    {
+      "id": "inspection-receipt",
+      "version": "1.0",
+      "flow": "event",
+      "model": "InspectionReceipt",
+      "sources": [
+        "libs/eirvah-contracts/src/eirvah_contracts/inspection.py"
+      ],
+      "version_binding": "message version",
+      "receivers": [
+        "modbus-adapter",
+        "state-namespace"
+      ]
+    },
+    {
+      "id": "native-inspection-receipt",
+      "version": "1.0",
+      "flow": "event",
+      "model": "Retained inspection session and sequence acknowledgement",
+      "sources": [
+        "services/modbus-data-subscriber/src/modbus_data_subscriber/service.py",
+        "services/modbus-simulator/src/modbus_simulator/server.py"
+      ],
+      "version_binding": "catalogue/native mapping",
+      "receivers": [
+        "modbus-physical"
+      ]
+    }
+  ]
+}

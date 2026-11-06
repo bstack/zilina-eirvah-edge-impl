@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from eirvah_contracts.signals import Quality, SignalValue, SourcePosition
+from eirvah_contracts.signals import Quality, SignalValue, SignalValueType, SourcePosition
 
 _CONTEXT = {
     "sosa": "http://www.w3.org/ns/sosa/",
@@ -25,6 +25,8 @@ class SOSAObservation(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    schema_version: Literal["1.0"] = "1.0"
+    value_type: SignalValueType = "double"
     made_by_sensor: str  # eirvah: URI e.g. "eirvah:TorqueSensor01"
     has_feature_of_interest: str  # eirvah: URI e.g. "eirvah:Capper"
     observed_property: str  # eirvah: URI e.g. "eirvah:Torque"
@@ -39,6 +41,8 @@ class SOSAObservation(BaseModel):
         doc: dict[str, Any] = {
             "@context": _CONTEXT,
             "@type": "sosa:Observation",
+            "eirvah:schemaVersion": self.schema_version,
+            "eirvah:valueType": self.value_type,
             "sosa:madeBySensor": {"@id": self.made_by_sensor},
             "sosa:hasFeatureOfInterest": {"@id": self.has_feature_of_interest},
             "sosa:observedProperty": {"@id": self.observed_property},
@@ -59,6 +63,8 @@ class SOSAObservation(BaseModel):
     @classmethod
     def from_jsonld(cls, doc: dict[str, Any]) -> SOSAObservation:
         return cls(
+            schema_version=doc["eirvah:schemaVersion"],
+            value_type=doc["eirvah:valueType"],
             position=SourcePosition.model_validate(doc["eirvah:position"])
             if doc.get("eirvah:position") is not None
             else None,

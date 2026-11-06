@@ -557,23 +557,23 @@
       "id": "raw-state",
       "kind": "industrial_state",
       "model": "RawSignalEnvelope",
-      "wire_version": null,
+      "wire_version": "1.0",
       "binding_status": "partial",
       "sources": [
         "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
       ],
-      "note": "Full semantic and delivery policy binding remains incomplete."
+      "note": "Explicit version 1.0 is emitted. Supported/unsupported parser and deployed binding checks are retained by the standalone E0 assurance case; this is not E2 equivalence evidence."
     },
     {
       "id": "canonical-state",
       "kind": "industrial_state",
       "model": "SOSAObservation",
-      "wire_version": null,
+      "wire_version": "1.0",
       "binding_status": "partial",
       "sources": [
         "libs/eirvah-contracts/src/eirvah_contracts/sosa.py"
       ],
-      "note": "Version not present on SOSA wire; catalogue binding and receiver compatibility remain to be fixed."
+      "note": "SOSA includes explicit schemaVersion and valueType. The deployed decision receiver validates its topic, sensor, feature, property, unit, type and timestamp against the pinned ontology."
     },
     {
       "id": "inspection",
@@ -646,12 +646,12 @@
       "id": "raw-inspection",
       "kind": "event",
       "model": "BottleInspection JSON string inside RawSignalEnvelope",
-      "wire_version": null,
+      "wire_version": "1.0",
       "binding_status": "partial",
       "sources": [
         "libs/eirvah-contracts/src/eirvah_contracts/signals.py"
       ],
-      "note": "A refinement binding is documented here; complete receiver compatibility and policy checks remain pending."
+      "note": "Explicit version 1.0 is emitted. Supported/unsupported parser and deployed binding checks are retained by the standalone E0 assurance case; this is not E2 equivalence evidence."
     },
     {
       "id": "authenticated-command",
@@ -1922,5 +1922,7 @@
       "Exactly-once real-plant effect",
       "Fresh actuation of expired inspections"
     ]
-  }
+  },
+  "contract_catalogue": "config/architecture/contract-catalogue.json",
+  "assurance_scope": "scripts/e0_capture.py --assurance evaluates selected runtime, contract and evidence boundaries. Native access, key holders and Kubernetes administrators remain trusted; unperformed E2/mixed-traffic/distributed experiments are separate."
 }

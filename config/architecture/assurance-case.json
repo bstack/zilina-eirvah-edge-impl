@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "id": "standalone-e0-assurance-v1",
+  "scope": "Finite local checks of C02, C03, C07, C08, C09 and C12; no E2 interoperability, congestion or distributed-placement result.",
+  "bypass_modes": [
+    "unsigned",
+    "tampered",
+    "wrong_writer",
+    "expired",
+    "wrong_envelope"
+  ],
+  "capture_actors": [
+    "amqp-actuation-event-subscriber",
+    "actuation-control-orchestrator",
+    "actuation-event-validator",
+    "actuation-signal-publisher"
+  ],
+  "retention_clock": "Explicit injected time with the production CommandLedger on an isolated file; no claim of a 24-hour live soak.",
+  "retention_seconds": 86400,
+  "assumptions": [
+    "One authoritative writer and retained ledger PVC",
+    "Trusted administrative/native access and provisioned key holders",
+    "Private sequence journals with no overflow or actor change inside command capture",
+    "Recorded causal clock envelope for the finite capture; external UTC accuracy not claimed"
+  ]
+}

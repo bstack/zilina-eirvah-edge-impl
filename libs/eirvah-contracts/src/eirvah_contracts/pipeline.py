@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
@@ -15,6 +16,8 @@ class ContextualizeResult(BaseModel):
     """Reply payload from ``uns-auto-contextualizer`` on ``uns.work.contextualize``."""
 
     model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
 
     uns_topic: str
     uns_path: UNSPath
@@ -32,6 +35,8 @@ class PublishRequest(BaseModel):
     """
 
     model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["1.0"] = "1.0"
 
     uns_topic: str
     correlation_id: str

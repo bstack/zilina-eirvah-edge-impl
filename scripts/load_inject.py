@@ -23,11 +23,13 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
+from functools import cache
 from itertools import cycle
 from pathlib import Path
 
 import nats
 from eirvah_contracts.envelope import NATSEnvelope
+from eirvah_contracts.observation import load_bindings
 from eirvah_contracts.pipeline import ContextualizeResult
 from eirvah_contracts.ulid import generate_correlation_id
 from eirvah_contracts.uns import build_uns_topic
@@ -61,16 +63,29 @@ NODE_IDS = [
 ]
 
 
+@cache
+def _node_contracts() -> dict[str, tuple[str, str]]:
+    bindings = load_bindings(Path(__file__).resolve().parents[1] / "config/eirvah-line-a.jsonld")
+    return {b["node"]: (b["unit"], b["value_type"]) for b in bindings.values()}
+
+
 def _build_payload(node_id: str) -> bytes:
     now = datetime.now(UTC).isoformat()
+    unit, value_type = _node_contracts().get(node_id, ("dimensionless", "double"))
+    values: dict[str, float | int | bool | str] = {
+        "double": 1.0,
+        "int64": 1,
+        "bool": True,
+        "string": "sample",
+    }
     return json.dumps(
         {
             "correlation_id": generate_correlation_id(),
             "payload": {
                 "node_id": node_id,
-                "value": 1.0,
-                "value_type": "double",
-                "unit": "dimensionless",
+                "value": values[value_type],
+                "value_type": value_type,
+                "unit": unit,
                 "quality": "good",
                 "source_timestamp": now,
                 "received_at": now,

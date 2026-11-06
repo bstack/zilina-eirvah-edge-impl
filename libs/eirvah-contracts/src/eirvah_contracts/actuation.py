@@ -39,6 +39,7 @@ class SignedEvidence(BaseModel):
 class ValidationResult(BaseModel):
     """Returned by actuation-event-validator on act.work.validate (spec §3.2)."""
 
+    schema_version: Literal["1.0"] = "1.0"
     decision: Literal["approve", "reject"]
     reason: str | None = None
     reason_code: RejectionReasonCode | None = None

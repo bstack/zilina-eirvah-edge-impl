@@ -15,16 +15,17 @@ import os
 import struct
 import subprocess
 from contextlib import ExitStack
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+import aiomqtt
 import yaml
 from conformance import evaluate, verdict
 from control import build_command, send
 from eirvah_contracts.actuation import ActuationRequest
-from eirvah_contracts.authorization import command_digest
+from eirvah_contracts.authorization import ApprovedWriteRequest, command_digest, sign_approval
 from eirvah_contracts.envelope import NATSEnvelope
 from eirvah_observability.execution import clock_snapshot
 from nats.aio.client import Client as NATSClient
@@ -33,7 +34,7 @@ from scenario import MqttObservations, Scenario, port_forward, run_scenario
 ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "config/architecture/local-e0-case.json"
 
-# Read-only in the target container: do not import the application or create journals.
+# Read-only in the target container: do not start the runtime or create journals.
 JOURNAL_PROBE = r"""
 import json,sys,time,os,hashlib
 from pathlib import Path
@@ -52,6 +53,11 @@ files=['libs/eirvah-observability/src/eirvah_observability/execution.py',
        'libs/eirvah-contracts/src/eirvah_contracts/actuation.py',
        'libs/eirvah-contracts/src/eirvah_contracts/authorization.py',
        'services/'+args['component']+'/src/'+args['component'].replace('-','_')+'/service.py']
+if args['component']=='actuation-signal-publisher':
+ files.extend(['services/actuation-signal-publisher/src/actuation_signal_publisher/ledger.py','services/actuation-signal-publisher/src/actuation_signal_publisher/config.py'])
+ from actuation_signal_publisher.config import SignalPublisherSettings
+ settings=SignalPublisherSettings()
+ meta['writer_policy']={'retention_s':settings.ledger_retention_s,'ledger_path':str(settings.ledger_path)}
 hashes={name:hashlib.sha256((Path('/workspace')/name).read_bytes()).hexdigest() for name in files}
 wall=time.time_ns();finish=time.monotonic_ns()
 domain='linux-monotonic:'+Path('/proc/sys/kernel/random/boot_id').read_text().strip()+':'+os.readlink('/proc/self/ns/time')
@@ -344,6 +350,47 @@ print(json.dumps([dict(r) for r in c.execute('SELECT command_id,digest,state,res
         return data
 
 
+class NativeTargetObservations(MqttObservations):
+    """Select an available test bottle from native latest state, not the durable FIFO.
+
+    The controller is paused for this command case, so it cannot receipt the FIFO.
+    This observation selects a simulator target only; it is not E2/UNS evidence.
+    """
+
+    def __init__(self, cluster: Cluster, port: int, username: str, password: str) -> None:
+        super().__init__(port, username, password)
+        self.cluster = cluster
+
+    async def passed_bottle(self) -> dict[str, Any]:
+        from eirvah_contracts.inspection import decode_inspection
+        from pymodbus.client import AsyncModbusTcpClient
+
+        async with AsyncModbusTcpClient(
+            "127.0.0.1", port=self.cluster.native_ports["modbus-simulator"]
+        ) as client:
+            async with asyncio.timeout(15):
+                while True:
+                    reply = await client.read_holding_registers(32, count=10, slave=1)
+                    if reply.isError():
+                        raise RuntimeError("native inspection snapshot unavailable")
+                    event = decode_inspection(reply.registers)
+                    if (
+                        event is not None
+                        and event.passed
+                        and event.inspection_id not in self.used
+                        and 0 <= (datetime.now(UTC) - event.inspected_at).total_seconds() < 2
+                    ):
+                        self.used.add(event.inspection_id)
+                        return dict(
+                            value=event.bottle_id,
+                            inspection_id=event.inspection_id,
+                            observed_at=event.inspected_at.isoformat(),
+                            evidence_boundary="simulator_latest_native_snapshot_for_test_target",
+                        )
+                    await asyncio.sleep(0.1)
+        raise TimeoutError("fresh native test bottle unavailable")
+
+
 def command_target(command: ActuationRequest) -> str:
     for target, part in [
         ("temperature", "/bottler/"),
@@ -533,6 +580,7 @@ async def execute(
     nats_port: int,
     starts: dict[str, Any],
     inventory: dict[str, Any],
+    approval_key: str | None = None,
 ) -> dict[str, Any]:
     submissions = []
     host_samples = []
@@ -540,6 +588,7 @@ async def execute(
     async def sender(command: ActuationRequest) -> dict[str, Any]:
         target = command_target(command)
         native_before = await asyncio.to_thread(cluster.native, target)
+        ledger_before = await asyncio.to_thread(cluster.ledger, [command.correlation_id])
         first = clock_snapshot()
         result = await send(command, amqp)
         last = clock_snapshot()
@@ -549,6 +598,7 @@ async def execute(
             "result": result,
             "target": target,
             "native_before": native_before,
+            "ledger_before": ledger_before,
             "native_after": native_after,
             "client_before": first,
             "client_after": last,
@@ -565,7 +615,8 @@ async def execute(
         plan,
         output / "run",
         sender=sender,
-        observations=MqttObservations(
+        observations=NativeTargetObservations(
+            cluster,
             mqtt_port,
             os.environ.get("EIRVAH_MQTT_USERNAME", "eirvah"),
             os.environ.get("EIRVAH_MQTT_PASSWORD", "eirvah-dev-password"),
@@ -602,6 +653,82 @@ async def execute(
         await nc.close()
     unsigned["native_after"] = await asyncio.to_thread(cluster.native, "capper")
     save(output / "unsigned-writer.json", unsigned)
+    bypass = [dict(mode="unsigned", **unsigned)]
+    if approval_key is not None:
+        nc = NATSClient()
+        await nc.connect(servers=[f"nats://127.0.0.1:{nats_port}"])
+        try:
+            for mode in ("tampered", "wrong_writer", "expired", "wrong_envelope"):
+                request = build_command("capper", "speed", 1200)
+                if mode == "expired":
+                    request = request.model_copy(
+                        update={
+                            "requested_at": datetime.now(UTC) - timedelta(seconds=20),
+                            "deadline": datetime.now(UTC) - timedelta(seconds=10),
+                        }
+                    )
+                ticket = sign_approval(
+                    request,
+                    approval_key,
+                    "another-writer" if mode == "wrong_writer" else "actuation-signal-publisher",
+                    allow_expired=mode == "expired",
+                )
+                if mode == "tampered":
+                    request = request.model_copy(update={"requested_value": 1300})
+                cid = (
+                    build_command("capper", "stop").correlation_id
+                    if mode == "wrong_envelope"
+                    else request.correlation_id
+                )
+                before_native = await asyncio.to_thread(cluster.native, "capper")
+                reply = await nc.request(
+                    "act.work.write_signal",
+                    NATSEnvelope(
+                        correlation_id=cid,
+                        payload=ApprovedWriteRequest(command=request, approval=ticket).model_dump(
+                            mode="json"
+                        ),
+                    )
+                    .model_dump_json()
+                    .encode(),
+                    timeout=5,
+                )
+                bypass.append(
+                    dict(
+                        mode=mode,
+                        command=request.model_dump(mode="json"),
+                        envelope_id=cid,
+                        approval_claims=ticket.model_dump(mode="json", exclude={"signature"}),
+                        native_before=before_native,
+                        native_after=await asyncio.to_thread(cluster.native, "capper"),
+                        reply=json.loads(reply.data),
+                    )
+                )
+        finally:
+            await nc.close()
+        save(output / "bypass-cases.json", bypass)
+    live_samples = {}
+    if approval_key is not None:
+        selected_topics = {
+            "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+            "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count",
+            "uniza/zilina/factory1/line_a/reject_station/rejector_01/last_rejected_bottle",
+            "uniza/zilina/factory1/line_a/inspector/inspector_01/bottle_inspection",
+        }
+        async with asyncio.timeout(20):
+            async with aiomqtt.Client(
+                "127.0.0.1",
+                mqtt_port,
+                username=os.environ.get("EIRVAH_MQTT_USERNAME", "eirvah"),
+                password=os.environ.get("EIRVAH_MQTT_PASSWORD", "eirvah-dev-password"),
+            ) as client:
+                for topic in selected_topics:
+                    await client.subscribe(topic, qos=1)
+                async for message in client.messages:
+                    live_samples[str(message.topic)] = json.loads(message.payload)
+                    if set(live_samples) == selected_topics:
+                        break
+        save(output / "contract-live-samples.json", live_samples)
     # End fences occur only after all owned commands have settled. No command is replayed blindly.
     await asyncio.sleep(0.3)
     ends = {
@@ -617,7 +744,16 @@ async def execute(
     if inventory != end_inventory:
         errors.append("pod/container/configuration/volume identity changed inside capture")
     records = []
+    all_records = []
     ids = {s["command"]["correlation_id"] for s in submissions}
+    bypass_ids = {
+        identifier
+        for e in bypass
+        for identifier in (
+            e.get("envelope_id", e["command"]["correlation_id"]),
+            e["command"]["correlation_id"],
+        )
+    }
     for pod in starts:
         errors.extend(pod + ": " + e for e in validate_fence(starts[pod], ends[pod]))
         for name, digest in starts[pod]["remote"]["source_hashes"].items():
@@ -629,14 +765,12 @@ async def execute(
         if starts[pod]["remote"]["source_hashes"] != ends[pod]["remote"]["source_hashes"]:
             errors.append(pod + ": deployed source changed")
         for row in ends[pod]["remote"]["records"]:
-            if row["correlation_id"] not in ids:
-                continue
             try:
                 calibrated = calibrate_record(row, starts[pod], ends[pod], host_samples)
             except ValueError:
                 errors.append(pod + ": clock bracket unavailable")
                 calibrated = row
-            records.append(
+            all_records.append(
                 {
                     **calibrated,
                     "source": {
@@ -646,6 +780,8 @@ async def execute(
                     },
                 }
             )
+    records = [r for r in all_records if r["correlation_id"] in ids]
+    save(output / "all-records.json", all_records)
     save(
         output / "calibration.json",
         {
@@ -666,7 +802,7 @@ async def execute(
         (dest / "records.jsonl").write_text(
             "".join(json.dumps(r) + "\n" for r in selected), encoding="utf-8"
         )
-    ledger = await asyncio.to_thread(cluster.ledger, sorted(ids | {command.correlation_id}))
+    ledger = await asyncio.to_thread(cluster.ledger, sorted(ids | bypass_ids))
     save(output / "writer-ledger.json", ledger)
     reference = json.loads((ROOT / "config/architecture/conformance-reference.json").read_text())
     manifest = json.loads((ROOT / "config/architecture/local-control.json").read_text())
@@ -688,6 +824,35 @@ async def execute(
     local["record_count"] = len(records)
     local["capture_errors"] = errors
     save(output / "local-case-report.json", local)
+    if approval_key is not None:
+        from assurance_components import capture
+
+        components = capture(output / "components")
+        save(
+            output / "assurance-evidence.json",
+            dict(
+                schema_version="1.0",
+                profile_sha256=components["profile_sha256"],
+                components=components,
+                host_samples=host_samples,
+                live_samples=live_samples,
+                receiver_snapshot=json.loads(
+                    (output / "receiver-contract-snapshot.json").read_text()
+                ),
+                records=records,
+                all_records=all_records,
+                submissions=submissions,
+                ledger=ledger,
+                bypass=bypass,
+                starts=starts,
+                ends=ends,
+                inventory_start=inventory,
+                inventory_end=end_inventory,
+                capture_errors=errors,
+                scenario=scenario,
+                local_report=local,
+            ),
+        )
     lines = [
         "# Bounded local E0 case",
         "",
@@ -715,6 +880,9 @@ def main() -> None:
     )
     parser.add_argument("--namespace", default="eirvah-edge")
     parser.add_argument("--repetitions", type=int, default=1)
+    parser.add_argument(
+        "--assurance", action="store_true", help="Capture the remaining standalone E0 checks"
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.repetitions < 1:
@@ -761,6 +929,8 @@ def main() -> None:
         {"default": {"context": context, "namespace": namespace}, "components": cluster.components},
     )
     previous = None
+    source_changed = False
+    source_binding = None
     outcome = None
     try:
         previous = json.loads(
@@ -775,6 +945,47 @@ def main() -> None:
                 "restored": False,
             },
         )
+        if args.assurance:
+            deployment = json.loads(
+                controller.run("get", "deployment", "decision-agent-stub", "-o", "json")
+            )
+            entries = deployment["spec"]["template"]["spec"]["containers"][0].get("env", [])
+            path = next(
+                (
+                    e.get("value")
+                    for e in entries
+                    if e["name"] == "DECISION_AGENT_STUB_OBSERVATION_CONTRACT_PATH"
+                ),
+                None,
+            )
+            if path != "/etc/decision-agent-stub/eirvah-line-a.jsonld":
+                raise RuntimeError("deployed observation contract guard not enabled")
+            code = (
+                "import json,hashlib;from pathlib import Path;files="
+                + repr(
+                    [
+                        "services/decision-agent-stub/src/decision_agent_stub/service.py",
+                        "libs/eirvah-contracts/src/eirvah_contracts/observation.py",
+                        "libs/eirvah-contracts/src/eirvah_contracts/sosa.py",
+                    ]
+                )
+                + ";print(json.dumps({'hashes':{p:hashlib.sha256((Path('/workspace')/p).read_bytes()).hexdigest() for p in files},'ontology':hashlib.sha256(Path('/etc/decision-agent-stub/eirvah-line-a.jsonld').read_bytes()).hexdigest(),'guard_path':"
+                + repr(path)
+                + "}))"
+            )
+            snapshot = json.loads(
+                controller.run(
+                    "exec",
+                    "-i",
+                    "deployment/decision-agent-stub",
+                    "--",
+                    "python",
+                    "-c",
+                    code,
+                    input="",
+                )
+            )
+            save(output / "receiver-contract-snapshot.json", snapshot)
         print("Pausing automatic decisions for the isolated local command case", flush=True)
         controller.run("scale", "deployment/decision-agent-stub", "--replicas=0")
         controller.run(
@@ -786,6 +997,25 @@ def main() -> None:
             "--timeout=90s",
             timeout=100,
         )
+        if args.assurance:
+            source = cluster.target("modbus-simulator")
+            spec = json.loads(source.run("get", "deployment", "modbus-simulator", "-o", "json"))
+            source_binding = next(
+                (
+                    e
+                    for e in spec["spec"]["template"]["spec"]["containers"][0].get("env", [])
+                    if e["name"] == "MODBUS_SIMULATOR_JAM_PROBABILITY"
+                ),
+                None,
+            )
+            save(output / "source-case-state.json", {"binding": source_binding, "restored": False})
+            source_changed = True
+            source.run(
+                "set", "env", "deployment/modbus-simulator", "MODBUS_SIMULATOR_JAM_PROBABILITY=0"
+            )
+            source.run(
+                "rollout", "status", "deployment/modbus-simulator", "--timeout=240s", timeout=250
+            )
         with ExitStack() as stack:
             rabbit = stack.enter_context(port_forward(*cluster.transport("rabbitmq", 5672)))
             mqtt = stack.enter_context(port_forward(*cluster.transport("mosquitto", 1883)))
@@ -798,6 +1028,32 @@ def main() -> None:
                 cluster.native_ports[simulator] = stack.enter_context(
                     port_forward(*cluster.transport(simulator, port))
                 )
+            encoded = cluster.target("rabbitmq").run(
+                "get", "secret", "actuation-security", "-o", "jsonpath={.data.experiment-amqp-url}"
+            )
+            parts = urlsplit(base64.b64decode(encoded).decode())
+            amqp = urlunsplit(
+                (
+                    parts.scheme,
+                    parts.netloc.split("@")[0] + f"@127.0.0.1:{rabbit}",
+                    parts.path,
+                    "",
+                    "",
+                )
+            )
+            approval_key = None
+            if args.assurance:
+                encoded_key = cluster.target("actuation-signal-publisher").run(
+                    "get", "secret", "actuation-security", "-o", "jsonpath={.data.approval-key}"
+                )
+                approval_key = base64.b64decode(encoded_key).decode()
+            initial_temperature = cluster.native("temperature")["setpoint"]
+            with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runtime:
+                warmup = runtime.run(
+                    send(build_command("temperature", "set", float(initial_temperature)), amqp)
+                )
+            if warmup.get("decision") != "approve":
+                raise RuntimeError("capture warmup did not settle")
             inventory = cluster.inventory(profile["actors"])
             save(output / "inventory-start.json", inventory)
             starts = {
@@ -812,19 +1068,6 @@ def main() -> None:
                         or hashlib.sha256((ROOT / name).read_bytes()).hexdigest() != digest
                     ):
                         raise RuntimeError("deployed source does not match capture revision")
-            encoded = cluster.target("rabbitmq").run(
-                "get", "secret", "actuation-security", "-o", "jsonpath={.data.experiment-amqp-url}"
-            )
-            parts = urlsplit(base64.b64decode(encoded).decode())
-            amqp = urlunsplit(
-                (
-                    parts.scheme,
-                    parts.netloc.split("@")[0] + f"@127.0.0.1:{rabbit}",
-                    parts.path,
-                    "",
-                    "",
-                )
-            )
             with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runtime:
                 outcome = runtime.run(
                     execute(
@@ -837,6 +1080,7 @@ def main() -> None:
                         nats,
                         starts,
                         inventory,
+                        approval_key=approval_key,
                     )
                 )
             print(
@@ -876,6 +1120,57 @@ def main() -> None:
             flush=True,
         )
     finally:
+        if source_changed:
+            restored_source = False
+            try:
+                source = cluster.target("modbus-simulator")
+                if source_binding is None:
+                    source.run(
+                        "set",
+                        "env",
+                        "deployment/modbus-simulator",
+                        "MODBUS_SIMULATOR_JAM_PROBABILITY-",
+                    )
+                else:
+                    binding = {
+                        **source_binding,
+                        "value": source_binding.get("value"),
+                        "valueFrom": source_binding.get("valueFrom"),
+                    }
+                    source.run(
+                        "patch",
+                        "deployment",
+                        "modbus-simulator",
+                        "--type=strategic",
+                        "-p",
+                        json.dumps(
+                            {
+                                "spec": {
+                                    "template": {
+                                        "spec": {
+                                            "containers": [
+                                                {"name": "modbus-simulator", "env": [binding]}
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        ),
+                    )
+                source.run(
+                    "rollout",
+                    "status",
+                    "deployment/modbus-simulator",
+                    "--timeout=240s",
+                    timeout=250,
+                )
+                restored_source = True
+            except (subprocess.SubprocessError, OSError):
+                outcome = None
+            save(
+                output / "source-case-state.json",
+                {"binding": source_binding, "restored": restored_source},
+            )
         if previous is not None:
             restored = False
             try:
@@ -906,6 +1201,12 @@ def main() -> None:
                     "restored": restored,
                 },
             )
+    evidence_path = output / "assurance-evidence.json"
+    if evidence_path.is_file():
+        package = json.loads(evidence_path.read_text())
+        package["controller_state"] = json.loads((output / "controller-state.json").read_text())
+        package["source_case_state"] = json.loads((output / "source-case-state.json").read_text())
+        save(evidence_path, package)
     raise SystemExit(
         0
         if outcome and outcome["status"] == "pass"

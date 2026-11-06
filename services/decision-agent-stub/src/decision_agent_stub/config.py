@@ -15,6 +15,7 @@ class DecisionAgentSettings(BaseSettings):
         extra="ignore",
     )
 
+    observation_contract_path: Path | None = None
     inbox_path: Path | None = None
     require_positions: bool = False
     receipt_key: SecretStr = SecretStr("")
