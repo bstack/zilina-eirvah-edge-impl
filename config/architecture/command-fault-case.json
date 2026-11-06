@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "id": "bounded-modbus-command-faults-v1",
+  "scope": "Finite fault checks on the authenticated command path and simulated Modbus rejection mailbox. No real-plant, other-protocol or mixed-traffic guarantee.",
+  "cases": [
+    "caller_reply_lost",
+    "before_write_disconnect",
+    "commit_dropped",
+    "native_ack_lost",
+    "writer_restart_after_effect",
+    "delayed_expired_command"
+  ],
+  "retention_seconds": 86400,
+  "native_boundary": "sequence commit followed by matching successful native acknowledgement",
+  "assumptions": [
+    "One authoritative writer with retained SQLite-compatible PVC",
+    "Trusted native/broker/Kubernetes administrative boundary",
+    "No concurrent business actuation during capture",
+    "Shared local clock domain; otherwise deadline verdict remains unknown"
+  ]
+}

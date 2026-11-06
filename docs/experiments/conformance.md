@@ -240,3 +240,50 @@ Adapter and publisher restarts, a source restart with retained counters/events, 
 `report.md` contains the five live verdicts; `combined-report/report.md` combines these records with the 31 consumer cases and the previous bounded command capture. **C05 and C06 pass within this selected profile.** The full study remains unknown (three rule families pass, ten remain unknown), with no failed rule family in that combined report. Unperformed interoperability, mixed-flow/fault, distributed-placement and other evidence obligations remain separate. Earlier partial captures are retained and have not been relabelled as successful.
 
 Final validation: **500 tests passed, 16 skipped**; strict mypy passed for 19 selected runtime/evaluator modules; changed Python files passed Ruff; `git diff --check` passed; the base deployment passed Kubernetes server-side dry-run validation. These are local engineering results, not controlled scaling measurements or real-plant validation.
+
+
+## Bounded command fault cases
+
+`scripts/fault_case.py` exercises the prospective profile in `config/architecture/command-fault-case.json` through the authenticated AMQP command path. The selected physical boundary is the Modbus simulated rejection mailbox. This extends E0 outcome/recovery evidence; it does not establish equivalent fault behaviour for OPC UA/S7, mixed-flow congestion or distributed performance.
+
+| Case | Required observation |
+| --- | --- |
+| Caller reply subscription lost | Writer completes once; exact replay returns its original completion and causes no further effect. |
+| Disconnect before the first write | Writer eventually records a retryable pre-write failure with zero effects. The caller may initially time out; exact replay can complete once after that history is established. |
+| Sequence commit dropped | Payload staging has begun, so the writer reports unknown. Independent source evidence shows zero committed effects; replay must not start another attempt. |
+| Native success acknowledgement lost | Source records one effect while writer/caller report unknown. Exact replay remains unknown and causes no additional effect. |
+| Writer restart after effect, before acknowledgement | Real pod replacement retains the ledger PVC and interrupted identity. Replay remains unknown; independent source evidence shows one effect, not two. |
+| Valid command delayed past expiry | A still-valid command is published while ingress is paused. After expiry and resumed ingress it is refused without entering native transport. |
+
+The distinction between zero-effect and one-effect unknown cases is deliberate. `unknown` is an honest application outcome, not a failed test and not proof that no effect occurred. Administrative inspection of simulated effect records provides experiment evidence; it does not automatically resolve that uncertainty in the application or claim an exactly-once physical guarantee.
+
+### Execution and isolation
+
+```powershell
+uv run python scripts/fault_case.py --context kind-eirvah-edge
+```
+
+The runner pauses automatic decisions, stops the simulated conveyor and selects six distinct available bottle IDs. It temporarily adds a sidecar to the existing single writer pod, using the same image and ledger PVC. A private ConfigMap redirects only the rejection target through a mailbox-restricted TCP proxy listening on **127.0.0.1 inside that pod**. There is no proxy Service, ingress, public evidence API or new application fault switch. Plans and bounded evidence files are read/written through authenticated `kubectl exec`. Simulator/device access, administrative access and the existing broker trust boundary remain declared assumptions.
+
+Normal device timeouts are retained for the ordinary interruption cases. Only the restart barrier temporarily extends the selected target timeout to let the experiment interrupt an in-flight write after a successful device acknowledgement has been withheld. That setup change itself restarts the writer before the interruption case. These timings coordinate fault placement; they are not performance measurements. Every case waits for the prior native attempt to settle before changing its fault plan, even if the caller has already timed out.
+
+Cases retain the full original command for replay, source snapshots and effect serials, private proxy decisions, bounded writer journal snapshots, deployed-source hashes, writer ledger rows, clocks and pod/PVC identities. The pre-restart snapshot is a complete journal prefix at its recorded fence, not a claim that the terminated process tail was exported. The independent evaluator checks source counter deltas, exact native values/sequences, approval-bound initiation counts, immutable command digests and recovery outcomes. Missing/overflowed journals, changed writer code, inconsistent records, unresolved clocks or incomplete restoration cannot silently pass. Checks use explicit conditions and also remain active with Python optimization enabled.
+
+`finally` restores the original writer pod template before removing the temporary ConfigMap, restores the original conveyor controls/fault state and original consumer/ingress replica counts. It never deletes recovery volumes or rewrites old command identities. Each run has a new evidence directory; partial and failed runs remain retained. A restoration failure is recorded explicitly and prevents a passing capture.
+
+```powershell
+uv run python scripts/conformance.py --run PATH_TO_COMMAND_CAPTURE --data-evidence PATH_TO_CONSUMER/evidence.json --recovery-evidence PATH_TO_RECOVERY/evidence.json --fault-evidence PATH_TO_FAULT_RUN/evidence.json
+```
+
+The fault evidence supplements C10 outcome checks. C11 mixed-traffic/congestion experiments and the broader study obligations remain separate. Passing these finite cases is not universal conformance, safety certification or a real-plant result.
+
+
+### Command-fault verification — 6 November 2026
+
+`results/command-faults/2026-11-06T18-28-37-532757Z/` passed all six prospective fault cases. Exact replay produced one effect for the lost caller reply and pre-write disconnect cases; retained unknown for the dropped commit (zero effects), lost native acknowledgement (one effect) and writer restart (one effect); and refusal without native initiation for the delayed expired request. The delayed request was confirmed published before its deadline and held beyond it. The successful capture used a two-second request budget; the runner now uses ten seconds and a twelve-second hold to provide more setup margin without changing the predicate. This is fault placement, not a latency result.
+
+Four native effects in total matched four source counter increments, with no duplicate initiation in the retained command records. Real writer pod replacement preserved the ledger volume. Restoration was confirmed, the temporary proxy/ConfigMap were removed, and all 21 pods were Ready. Previous setup/sequence failures remain retained as incomplete or failed rehearsals rather than being rewritten.
+
+The combined report, using a fresh consumer replay plus the retained command and recovery packages, has **C01, C05, C06 and C10 passing within the selected profile**, nine remaining rule families unknown and no failing rule family. The full study remains unknown. Mixed-flow congestion (C11), interoperability and distributed evaluation are still separate obligations; neither the source effect audit nor the pre-restart journal prefix establishes a real-plant exactly-once guarantee.
+
+Final checks passed: **525 tests, 16 skipped**, strict mypy for the four new/updated evaluator-runner modules, Ruff and `git diff --check`. No production service source change or cluster rebuild was needed; the live experiment used temporary configuration around the existing writer image.
