@@ -70,7 +70,7 @@ def test_native_feedback_survives_conversion_and_contextualization() -> None:
         raw = RawSignalEnvelope(
             source_endpoint="test",
             node_id=alias,
-            value=1,
+            value=0.4 if alias == "Conveyor.Belt01.SpeedSetpoint" else 1,
             value_type=rules[alias].value_type,
             quality="good",
             source_timestamp=now,

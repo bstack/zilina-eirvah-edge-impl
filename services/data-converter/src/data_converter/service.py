@@ -12,6 +12,7 @@ import yaml
 from eirvah_bus.client import BusClient
 from eirvah_bus.consumer import subscribe_queue_group
 from eirvah_contracts.envelope import EnvelopeError, NATSEnvelope
+from eirvah_contracts.measurement import EngineeringPrecision, normalize_measurement
 from eirvah_contracts.signals import NormalizedSignalEnvelope, RawSignalEnvelope, SignalValueType
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
@@ -33,6 +34,7 @@ class ConversionRule(BaseModel):
     drop_bad_quality: bool = False
     scale: float | None = None
     offset: float | None = None
+    precision: EngineeringPrecision | None = None
 
 
 def load_rules(path: Path) -> dict[str, ConversionRule]:
@@ -51,6 +53,8 @@ def apply_conversion(
         value = float(value) * rule.scale
     if rule.offset is not None:
         value = float(value) + rule.offset
+    if rule.precision is not None:
+        value = normalize_measurement(value, rule.precision)
     return NormalizedSignalEnvelope(
         position=raw.position,
         node_id=raw.node_id,

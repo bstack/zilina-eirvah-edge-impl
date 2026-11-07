@@ -1,0 +1,348 @@
+{
+  "schema_version": "1.0",
+  "id": "e2-golden-replay-v2",
+  "scope": "In-process preparation using production adapter helpers, integration functions and decision receiver; no native transport, brokers, device writes or performance comparison.",
+  "absolute_tolerance": 1e-06,
+  "protocols": [
+    "opcua",
+    "modbus",
+    "s7"
+  ],
+  "variants": [
+    "canonical",
+    "source_specific"
+  ],
+  "command_target": "uniza/zilina/factory1/line_a/bottler/setpoint_unit/setpoint_temperature",
+  "signals": {
+    "speed": {
+      "node": "Conveyor.Belt01.SpeedSetpoint",
+      "topic": "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+      "unit": "m/s",
+      "value_type": "double",
+      "sensor": "https://eirvah.uniza/ontology/ControlFeedback2",
+      "feature": "https://eirvah.uniza/ontology/Conveyor",
+      "property": "https://eirvah.uniza/ontology/ControlProperty2"
+    },
+    "temperature": {
+      "node": "Bottler.Temperature01",
+      "topic": "uniza/zilina/factory1/line_a/bottler/temperature_sensor_01/temperature",
+      "unit": "degC",
+      "value_type": "double",
+      "sensor": "https://eirvah.uniza/ontology/BottlerTemperatureSensor01",
+      "feature": "https://eirvah.uniza/ontology/Bottler",
+      "property": "https://eirvah.uniza/ontology/Temperature"
+    },
+    "count": {
+      "node": "RejectStation.RejectCounter01",
+      "topic": "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count",
+      "unit": "dimensionless",
+      "value_type": "int64",
+      "sensor": "https://eirvah.uniza/ontology/RejectStationRejectCounter01",
+      "feature": "https://eirvah.uniza/ontology/RejectStation",
+      "property": "https://eirvah.uniza/ontology/RejectCount"
+    }
+  },
+  "source_bindings": {
+    "opcua": {
+      "speed": {
+        "node": "Conveyor.Belt01.SpeedSetpoint",
+        "topic": "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+        "unit": "m/s",
+        "value_type": "double",
+        "sensor": "https://eirvah.uniza/ontology/ControlFeedback2",
+        "feature": "https://eirvah.uniza/ontology/Conveyor",
+        "property": "https://eirvah.uniza/ontology/ControlProperty2",
+        "scale": 100,
+        "native_type": "real",
+        "precision": {
+          "resolution": 0.01,
+          "minimum": 0.0,
+          "maximum": 0.8,
+          "encoding_error": 3e-08
+        }
+      },
+      "temperature": {
+        "node": "Bottler.Temperature01",
+        "topic": "uniza/zilina/factory1/line_a/bottler/temperature_sensor_01/temperature",
+        "unit": "degC",
+        "value_type": "double",
+        "sensor": "https://eirvah.uniza/ontology/BottlerTemperatureSensor01",
+        "feature": "https://eirvah.uniza/ontology/Bottler",
+        "property": "https://eirvah.uniza/ontology/Temperature",
+        "scale": 10,
+        "native_type": "real"
+      },
+      "count": {
+        "node": "RejectStation.RejectCounter01",
+        "topic": "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count",
+        "unit": "dimensionless",
+        "value_type": "int64",
+        "sensor": "https://eirvah.uniza/ontology/RejectStationRejectCounter01",
+        "feature": "https://eirvah.uniza/ontology/RejectStation",
+        "property": "https://eirvah.uniza/ontology/RejectCount",
+        "scale": 1,
+        "native_type": "int"
+      }
+    },
+    "modbus": {
+      "speed": {
+        "node": "Conveyor.Belt01.SpeedSetpoint",
+        "topic": "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+        "unit": "m/s",
+        "value_type": "double",
+        "sensor": "https://eirvah.uniza/ontology/ControlFeedback2",
+        "feature": "https://eirvah.uniza/ontology/Conveyor",
+        "property": "https://eirvah.uniza/ontology/ControlProperty2",
+        "scale": 100,
+        "native_type": "real",
+        "precision": {
+          "resolution": 0.01,
+          "minimum": 0.0,
+          "maximum": 0.8,
+          "encoding_error": 3e-08
+        }
+      },
+      "temperature": {
+        "node": "Bottler.Temperature01",
+        "topic": "uniza/zilina/factory1/line_a/bottler/temperature_sensor_01/temperature",
+        "unit": "degC",
+        "value_type": "double",
+        "sensor": "https://eirvah.uniza/ontology/BottlerTemperatureSensor01",
+        "feature": "https://eirvah.uniza/ontology/Bottler",
+        "property": "https://eirvah.uniza/ontology/Temperature",
+        "scale": 10,
+        "native_type": "real"
+      },
+      "count": {
+        "node": "RejectStation.RejectCounter01",
+        "topic": "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count",
+        "unit": "dimensionless",
+        "value_type": "int64",
+        "sensor": "https://eirvah.uniza/ontology/RejectStationRejectCounter01",
+        "feature": "https://eirvah.uniza/ontology/RejectStation",
+        "property": "https://eirvah.uniza/ontology/RejectCount",
+        "scale": 1,
+        "native_type": "int"
+      }
+    },
+    "s7": {
+      "speed": {
+        "node": "Conveyor.Belt01.SpeedSetpoint",
+        "topic": "uniza/zilina/factory1/line_a/conveyor/belt_01/speed_setpoint",
+        "unit": "m/s",
+        "value_type": "double",
+        "sensor": "https://eirvah.uniza/ontology/ControlFeedback2",
+        "feature": "https://eirvah.uniza/ontology/Conveyor",
+        "property": "https://eirvah.uniza/ontology/ControlProperty2",
+        "scale": 100,
+        "native_type": "real",
+        "precision": {
+          "resolution": 0.01,
+          "minimum": 0.0,
+          "maximum": 0.8,
+          "encoding_error": 3e-08
+        }
+      },
+      "temperature": {
+        "node": "Bottler.Temperature01",
+        "topic": "uniza/zilina/factory1/line_a/bottler/temperature_sensor_01/temperature",
+        "unit": "degC",
+        "value_type": "double",
+        "sensor": "https://eirvah.uniza/ontology/BottlerTemperatureSensor01",
+        "feature": "https://eirvah.uniza/ontology/Bottler",
+        "property": "https://eirvah.uniza/ontology/Temperature",
+        "scale": 10,
+        "native_type": "real"
+      },
+      "count": {
+        "node": "RejectStation.RejectCounter01",
+        "topic": "uniza/zilina/factory1/line_a/reject_station/reject_counter_01/reject_count",
+        "unit": "dimensionless",
+        "value_type": "int64",
+        "sensor": "https://eirvah.uniza/ontology/RejectStationRejectCounter01",
+        "feature": "https://eirvah.uniza/ontology/RejectStation",
+        "property": "https://eirvah.uniza/ontology/RejectCount",
+        "scale": 1,
+        "native_type": "int"
+      }
+    }
+  },
+  "samples": [
+    {
+      "id": "speed-normal",
+      "signal": "speed",
+      "expected": 0.4,
+      "opcua": 0.4,
+      "modbus": 40,
+      "s7": "3ecccccd",
+      "expected_setpoint": 22.0
+    },
+    {
+      "id": "speed-hysteresis",
+      "signal": "speed",
+      "expected": 0.55,
+      "opcua": 0.55,
+      "modbus": 55,
+      "s7": "3f0ccccd",
+      "expected_setpoint": null
+    },
+    {
+      "id": "speed-high",
+      "signal": "speed",
+      "expected": 0.7,
+      "opcua": 0.7,
+      "modbus": 70,
+      "s7": "3f333333",
+      "expected_setpoint": 26.0
+    },
+    {
+      "id": "speed-high-repeat",
+      "signal": "speed",
+      "expected": 0.7,
+      "opcua": 0.7,
+      "modbus": 70,
+      "s7": "3f333333",
+      "expected_setpoint": null
+    },
+    {
+      "id": "speed-high-hysteresis",
+      "signal": "speed",
+      "expected": 0.55,
+      "opcua": 0.55,
+      "modbus": 55,
+      "s7": "3f0ccccd",
+      "expected_setpoint": null
+    },
+    {
+      "id": "speed-return",
+      "signal": "speed",
+      "expected": 0.4,
+      "opcua": 0.4,
+      "modbus": 40,
+      "s7": "3ecccccd",
+      "expected_setpoint": 22.0
+    },
+    {
+      "id": "speed-high-boundary",
+      "signal": "speed",
+      "expected": 0.6,
+      "opcua": 0.6,
+      "modbus": 60,
+      "s7": "3f19999a",
+      "expected_setpoint": 26.0
+    },
+    {
+      "id": "speed-normal-boundary",
+      "signal": "speed",
+      "expected": 0.5,
+      "opcua": 0.5,
+      "modbus": 50,
+      "s7": "3f000000",
+      "expected_setpoint": 22.0
+    },
+    {
+      "id": "speed-high-final",
+      "signal": "speed",
+      "expected": 0.75,
+      "opcua": 0.75,
+      "modbus": 75,
+      "s7": "3f400000",
+      "expected_setpoint": 26.0
+    },
+    {
+      "id": "speed-upper-bound",
+      "signal": "speed",
+      "expected": 0.8,
+      "opcua": 0.8,
+      "modbus": 80,
+      "s7": "3f4ccccd",
+      "expected_setpoint": null
+    },
+    {
+      "id": "speed-over-range",
+      "signal": "speed",
+      "expected": 0.81,
+      "opcua": 0.81,
+      "modbus": 81,
+      "s7": "3f4f5c29",
+      "expected_setpoint": null,
+      "expected_error": "ValueError"
+    },
+    {
+      "id": "temperature-ambient",
+      "signal": "temperature",
+      "expected": 22.0,
+      "opcua": 22.0,
+      "modbus": 220,
+      "s7": "41b00000",
+      "expected_setpoint": null
+    },
+    {
+      "id": "temperature-warm",
+      "signal": "temperature",
+      "expected": 26.0,
+      "opcua": 26.0,
+      "modbus": 260,
+      "s7": "41d00000",
+      "expected_setpoint": null
+    },
+    {
+      "id": "temperature-upper",
+      "signal": "temperature",
+      "expected": 30.0,
+      "opcua": 30.0,
+      "modbus": 300,
+      "s7": "41f00000",
+      "expected_setpoint": null
+    },
+    {
+      "id": "count-0",
+      "signal": "count",
+      "expected": 0,
+      "opcua": 0,
+      "modbus": 0,
+      "s7": "0000",
+      "expected_setpoint": null
+    },
+    {
+      "id": "count-1",
+      "signal": "count",
+      "expected": 1,
+      "opcua": 1,
+      "modbus": 1,
+      "s7": "0001",
+      "expected_setpoint": null
+    },
+    {
+      "id": "count-32767",
+      "signal": "count",
+      "expected": 32767,
+      "opcua": 32767,
+      "modbus": 32767,
+      "s7": "7fff",
+      "expected_setpoint": null
+    }
+  ],
+  "limitations": [
+    "Golden synthetic samples, not a published industrial workload or measured plant data.",
+    "Equivalent logical signals are intentionally replayed through every protocol; deployed station mappings are not changed.",
+    "Timestamps are injected observation times; transport latency and clock synchronization are not measured.",
+    "Positions and durable recovery are covered separately by E0; this replay does not exercise adapter acquisition loops.",
+    "Unsigned 16-bit Modbus counters are restricted to the common signed S7 INT range for this comparison; wider counters need a declared representation.",
+    "Float32 tolerance applies to numeric comparison only, never to command equality or policy thresholds. The upper bound and pre-rounding range rejection are included.",
+    "Source-specific consumer is a study baseline with local mappings, not an optimized competitor or a measured integration-effort result.",
+    "Source-addition effort, native/protocol faults, event interchange, broker delivery and device effects remain to be evaluated."
+  ],
+  "precision_contract": {
+    "id": "simulated-conveyor-speed-v2",
+    "unit": "m/s",
+    "rounding": "half_even",
+    "policy": {
+      "resolution": 0.01,
+      "minimum": 0.0,
+      "maximum": 0.8,
+      "encoding_error": 3e-08
+    },
+    "reason": "Common engineering resolution aligned with the selected Modbus hundredths-of-metre/second representation; range checked before rounding."
+  }
+}

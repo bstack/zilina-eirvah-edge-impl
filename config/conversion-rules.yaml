@@ -39,6 +39,13 @@ rules:
     value_type: double
     unit: m/s
     drop_bad_quality: false
+    # Simulated conveyor contract: 0.01 m/s, half-even rounding, valid range checked first.
+    # 3e-8 m/s bounds float32 representation error at 0.8 (half an ULP is ~2.98e-8).
+    precision:
+      resolution: 0.01
+      minimum: 0.0
+      maximum: 0.8
+      encoding_error: 0.00000003
   - node_id: RejectStation.LastRejectedBottle
     value_type: int64
     unit: dimensionless
