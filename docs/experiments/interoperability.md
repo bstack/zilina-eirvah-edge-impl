@@ -69,3 +69,42 @@ These fixtures are synthetic and tied to the selected simulated line. They are n
 `results/interoperability/2026-11-07T05-56-29-062718Z/` retained a passing 102-case matrix (including six expected range refusals), two attribution/completeness checks and six passing paired upper-bound checks. The unrounded S7 value was 0.800000011920929; both normalized variants produced 0.8 and the expected warmer request. C04 remains unknown.
 
 Final regression validation: **601 passed, 16 skipped**. Ruff, strict mypy for the three changed/new runtime modules and `git diff --check` passed. The existing feedback fixture was adjusted from an out-of-range 1 m/s to a valid 0.4 m/s; dedicated tests retain over-range rejection coverage. These checks used local production code in-process. The cluster was not redeployed and the changes have not been committed or pushed.
+
+
+## Isolated native acquisition and broker rehearsal
+
+```powershell
+uv run python scripts/e2_native.py
+```
+
+This next stage exercises real OPC UA, Modbus TCP and S7 connections through the existing production subscriber runtimes. The production converter, contextualizer, orchestrator and MQTT publisher run as separate local Python processes. Separate disposable NATS/Mosquitto containers carry their actual request/reply and public MQTT traffic. A deterministic fixture container supplies equivalent speed, temperature and counter representations; it uses the native libraries from the existing `actuation-signal-publisher:local` image. Docker and that locally built image are prerequisites. There are no new dependencies.
+
+Every published host port is bound to **127.0.0.1**. The test-only brokers carry synthetic data and use no application security keys; MQTT anonymous access is confined to this loopback rehearsal. No production broker, Kubernetes service, automatic line controller, command queue or actuator is used by this runner. Native fixture control uses a private mounted file, not an evidence HTTP endpoint. Readiness and connection settings are explicit. Worker subprocesses use the Windows-compatible Selector event loop.
+
+Four cases per protocol select 0.4, 0.7, 0.8 and out-of-range 0.81 m/s, along with independently specified temperature and counter inputs. Production subscribers publish raw envelopes with persistent per-signal producer positions. An independent native client reads back the fixture values. The checker reconciles all 36 selected signal results by correlation ID with the captured NATS ingress and either the corresponding SOSA MQTT observation or the converter dead-letter record. It checks source endpoint, exact per-signal identity, native value, semantic binding, unit/type, source timestamp and position preservation. Both the canonical result and consumer-owned source-specific interpretation are compared with the golden expectations.
+
+The existing production-mode rule is evaluated in-process for the resulting speed observations, with a fixed declared 100 ms observation age for both variants. Semantic commands must agree with one another and with the expected 22/26 degree C recipe transition, including no extra command when high mode continues. These are **derived decision checks**, not live consumer-to-AMQP command delivery, clock-synchronization evidence, latency measurements or independently observed actuator effects. Quality/error semantics beyond the selected converter refusal remain additional work.
+
+Every run retains raw MQTT/NATS records, selected correlations, native readback, dependency/Python versions, adapter maps, worker settings/logs, Docker image IDs and loopback port bindings, process IDs/exit codes, source/config hashes and exact source snapshots. All subprocesses belong to that run. Container removal first verifies its unique owner label; failure to collect a log does not skip removal. Cleanup is independently confirmed and incomplete restoration prevents a passing verdict. Previous failed/incomplete runs remain unchanged.
+
+`native_case=pass` covers only this selected native acquisition and broker profile. **C04 remains unknown**: source-addition effort, the remaining protocol/contract cases, full command delivery/device responses where selected and controlled comparative experiments still need their own evidence. The existing architecture-wide report is not silently promoted by a function or transport rehearsal.
+
+
+### Native verification - 9 November 2026
+
+`results/e2-native/2026-11-09T08-37-19-391372Z/` passed all 36 selected signal comparisons plus matrix completeness. Real production adapter loops, NATS request/reply and MQTT publication were exercised against isolated native fixture servers. Source-specific interpretations and derived recipe decisions matched the golden cases, including the 0.8 representation boundary and 0.81 converter refusal. Exact source snapshots and dependency versions were retained; no collection errors occurred and all owned containers/processes were cleaned up. This is the selected acquisition/broker rehearsal, not full C04 conformance or actuator-effect evidence.
+
+The committed converter image `data-converter:5fbf81f` was deployed to `kind-eirvah-edge/eirvah-edge`; the live pod's exact precision policy was verified. Deployment evidence is in `results/converter-deployment/2026-11-07T10-23-03-371095Z/`. Applying the component alone encountered the full stack's immutable selector labels; a focused image/ConfigMap pod-template patch preserved that selector and completed successfully.
+
+The 7 November live smoke capture (`results/e0-capture/2026-11-07T12-15-14-766286Z/`) passed the control scenarios, native feedback, replay and refusal checks, but its UTC deadline intervals remained unknown; its original controller replica count was restored. A later assurance capture (`results/e0-capture/2026-11-09T08-39-26-770595Z/`) was interrupted before journal collection and remains unknown. Its process was confirmed absent and its original one-replica automatic consumer was independently restored. This partial capture has not been relabelled as passing; a fresh assurance capture is still required for complete current-deployment verification.
+
+Final tooling validation: **624 tests passed, 16 skipped**; Ruff, strict mypy for both native runner modules and `git diff --check` passed. Native runner changes are not yet committed/pushed. The next E2 work is the source-addition comparison and the remaining contract, quality and command/device-response cases, followed by controlled repetitions.
+
+
+### Completed deployment-assurance rerun - 9 November 2026
+
+The fresh capture `results/e0-capture/2026-11-09T09-42-56-217268Z/` **passed the bounded local case**, retaining 110 execution records and 15 submissions. C08 deadline checks now pass. Independent evaluation of `assurance-evidence.json` also passed runtime bypass, contract semantics, retained-history and collection-coverage checks. Its capture-only architecture report has C01, C02, C03, C07, C08, C09 and C12 passing. Other families remain unknown in that report because their separate recovery/fault/interoperability/deployment datasets were not supplied; this does not relabel earlier evidence or establish universal conformance.
+
+The original automatic-consumer replica count and simulator jam binding were independently confirmed restored, and all 21 research pods were Ready. Docker initially could not start because of stale zero-byte runtime sockets. Only verified socket-only runtime folders were preserved as backups so Docker could recreate them; containers, volumes and the existing cluster were not reset. An early attempt while services were recovering remains retained as incomplete. The successful capture began after all pods were Ready.
+
+This completed rerun supersedes the earlier pending deployment-assurance action. The remaining next actions are to commit/push the native E2 tooling, then complete the source-addition and remaining protocol/contract/command-response comparisons.
