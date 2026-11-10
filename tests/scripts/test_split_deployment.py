@@ -117,3 +117,22 @@ def test_changed_edge_key_is_refused(config):
 
     with pytest.raises(ValueError, match="trust"):
         validate_edge_projection(changed, edge)
+
+
+def test_study_fixture_starts_only_new_modbus_source_parked(config):
+    config["fixture"] = {"start_parked": True}
+    raw = [
+        dict(
+            kind="Deployment",
+            metadata=dict(name="modbus-simulator"),
+            spec=dict(template=dict(spec=dict(containers=[dict(name="modbus-simulator", env=[])]))),
+        )
+    ]
+
+    selected = materialize(config, "edge", raw)
+
+    env = selected[0]["spec"]["template"]["spec"]["containers"][0]["env"]
+    assert (
+        dict((e["name"], e["value"]) for e in env)["MODBUS_SIMULATOR_INITIAL_CONVEYOR_RUNNING"]
+        == "false"
+    )

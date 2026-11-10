@@ -23,6 +23,7 @@ import yaml
 from asyncua import Client as UaClient
 from decision_agent_stub.service import ProductionModeRule
 from eirvah_contracts.observation import load_bindings, validate_observation
+from eirvah_observability.experiment import emit, phase
 from interoperability import (
     PROFILE,
     ROOT,
@@ -107,6 +108,7 @@ class OwnedResources:
         cid = self.docker(*options, *extra, image, *(command or []))
         if not re.fullmatch("[a-f0-9]{64}", cid):
             raise RuntimeError("Unexpected container identity")
+        emit("container_started", name=name, container_id=cid)
         item = dict(id=cid, name=name, image=image)
         self.containers.append(item)
         info = json.loads(self.docker("inspect", cid))[0]
@@ -130,6 +132,7 @@ class OwnedResources:
             env=os.environ.copy(),
         )
         self.processes.append((process, log, name))
+        emit("process_started", name=name, process_pid=process.pid)
         return process
 
     def stop(self, process: subprocess.Popen[Any]) -> None:
@@ -796,7 +799,10 @@ def main() -> None:
         git_sha=subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
     )
     try:
-        with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+        with (
+            asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner,
+            phase("native-acquisition-and-gateway"),
+        ):
             runner.run(capture(resources, data))
     except (Exception, KeyboardInterrupt) as exc:
         data["errors"].append(dict(type=type(exc).__name__, message=str(exc)[-1500:]))

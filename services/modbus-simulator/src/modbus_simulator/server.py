@@ -100,6 +100,9 @@ class SimulatorRuntime:
         self._rng = random.Random(settings.seed)
         self._metrics = SimulatorMetrics()
         self._block = RegisterBlock()
+        self._block.conveyor.running = settings.initial_conveyor_running
+        self._block.conveyor_active = int(settings.initial_conveyor_running)
+        self._block.belt_speed_raw = self._block.conveyor.speed
         self._inspection = InspectionStream(
             session=secrets.randbits(64) or 1,
             every_n_bottles=settings.inspection_every_n_bottles,

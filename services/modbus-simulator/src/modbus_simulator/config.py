@@ -15,6 +15,7 @@ class SimulatorSettings(BaseSettings):
         extra="ignore",
     )
 
+    initial_conveyor_running: bool = True
     journal_path: Path | None = None
     outbox_capacity: int = Field(default=4096, ge=1)
     host: str = "0.0.0.0"

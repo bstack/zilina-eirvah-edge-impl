@@ -165,3 +165,7 @@ The five-target functional implementation and native OPC UA/Modbus/S7 mappings a
 Bottle-conditioning warmer model, assumptions and local checks: [warmer-control.md](docs/experiments/warmer-control.md).
 
 Automatic sampled bottle inspection and rejection: [automatic-inspection.md](docs/experiments/automatic-inspection.md).
+
+## Local experiment automation
+
+Repeatable workloads, protected fixture resets, repetitions, resource capture and combined E0/E1/E2/split reports: [experiment-automation.md](docs/experiments/experiment-automation.md). The supplied profiles rehearse the experiment machinery locally; formal study acceptance remains separate.

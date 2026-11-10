@@ -21,6 +21,7 @@ from e0_capture import Cluster
 from eirvah_contracts.envelope import NATSEnvelope
 from eirvah_contracts.inspection import BottleInspection
 from eirvah_contracts.ulid import generate_correlation_id
+from eirvah_observability.experiment import phase
 from interoperability import ROOT, digest
 from load_inject import NODE_IDS, _build_payload, _validate_reply
 from scenario import port_forward
@@ -28,6 +29,7 @@ from scenario import port_forward
 PROFILE = ROOT / "deploy/k3s/overlays/e1-local"
 WORKER = ROOT / "services/uns-auto-contextualizer/src/uns_auto_contextualizer/service.py"
 SOURCES = [
+    ROOT / "libs/eirvah-observability/src/eirvah_observability/experiment.py",
     Path(__file__),
     ROOT / "scripts/e1_processing.py",
     WORKER,
@@ -80,6 +82,24 @@ async def query(client: httpx.AsyncClient, expression: str) -> list[dict[str, An
     if result["status"] != "success":
         raise ValueError("Prometheus query failed")
     return list(result["data"]["result"])
+
+
+async def processing_counters(
+    prom: httpx.AsyncClient, worker: str, expected: dict[str, int]
+) -> list[dict[str, Any]]:
+    """Wait for the selected pod's scrape; absence is never a zero counter."""
+    for _ in range(40):
+        rows = await query(
+            prom, 'eirvah_e1_completed_total{app="e1-processing",pod="' + worker + '"}'
+        )
+        totals = {
+            flow: sum(float(v["value"][1]) for v in rows if v["metric"]["flow"] == flow)
+            for flow in expected
+        }
+        if rows and totals == expected:
+            return rows
+        await asyncio.sleep(1)
+    raise RuntimeError("selected pod counters did not reconcile before deadline")
 
 
 async def counters(client: httpx.AsyncClient) -> dict[str, float]:
@@ -200,16 +220,18 @@ def context_jobs(count: int, rate: int) -> list[tuple[float, str, bytes]]:
     ]
 
 
-def mixed_jobs(duration: int) -> list[tuple[float, str, bytes]]:
+def mixed_jobs(
+    duration: int, data_rate: int = 120, command_rate: int = 5, event_rate: int = 5
+) -> list[tuple[float, str, bytes]]:
     jobs = [
-        (i / 120, "data", _build_payload(NODE_IDS[i % len(NODE_IDS)]))
-        for i in range(duration * 120)
+        (i / data_rate, "data", _build_payload(NODE_IDS[i % len(NODE_IDS)]))
+        for i in range(duration * data_rate)
     ]
-    for i in range(duration * 5):
+    for i in range(duration * command_rate):
         command = build_command("temperature", "set", 26.0)
         jobs.append(
             (
-                i / 5,
+                i / command_rate,
                 "command",
                 NATSEnvelope(
                     correlation_id=command.correlation_id, payload=command.model_dump(mode="json")
@@ -218,6 +240,7 @@ def mixed_jobs(duration: int) -> list[tuple[float, str, bytes]]:
                 .encode(),
             )
         )
+    for i in range(duration * event_rate):
         event = BottleInspection(
             inspection_id=f"0000000000000001:{i + 1:04x}",
             bottle_id=i + 1,
@@ -226,7 +249,7 @@ def mixed_jobs(duration: int) -> list[tuple[float, str, bytes]]:
         )
         jobs.append(
             (
-                i / 5,
+                i / event_rate,
                 "event",
                 NATSEnvelope(
                     correlation_id=generate_correlation_id(), payload=event.model_dump(mode="json")
@@ -262,6 +285,7 @@ async def capture(
     data: dict[str, Any],
     hpa_seconds: int,
     hpa_rate: int,
+    reverse_order: bool = False,
 ) -> None:
     for replicas in (1, 3):
         cluster.run("scale", "deployment/uns-auto-contextualizer", "--replicas=" + str(replicas))
@@ -275,7 +299,8 @@ async def capture(
             pods_before=pods(cluster, "uns-auto-contextualizer"),
             before=await counters(prom),
         )
-        case["rows"] = await load(nc, context_jobs(120, 40))
+        with phase("sharing-" + str(replicas)):
+            case["rows"] = await load(nc, context_jobs(120, 40))
         await asyncio.sleep(5)
         case.update(after=await counters(prom), pods_after=pods(cluster, "uns-auto-contextualizer"))
         case["pass"] = check_sharing(case)
@@ -288,20 +313,28 @@ async def capture(
     # Same exact payloads and schedule in both variants; no writes/approvals occur.
     jobs = mixed_jobs(8)
     data["comparison_workload"] = [dict(offset=o, flow=f, body=json.loads(b)) for o, f, b in jobs]
-    for mode in ("shared", "separate"):
+    for mode in ("separate", "shared") if reverse_order else ("shared", "separate"):
         cluster.run("set", "env", "deployment/e1-processing", "E1_MODE=" + mode)
+        cluster.run("rollout", "restart", "deployment/e1-processing")
         cluster.run("rollout", "status", "deployment/e1-processing", "--timeout=120s", timeout=130)
         await settle(cluster, "e1-processing", 1)
         await load(nc, mixed_jobs(1))  # Initialize both pools before the measured workload.
-        await asyncio.sleep(4)
-        before = await query(prom, 'eirvah_e1_completed_total{app="e1-processing"}')
+        selected = pods(cluster, "e1-processing")
+        if len(selected) != 1:
+            raise RuntimeError("expected one comparison worker")
+        worker = next(iter(selected))
+        warmup = {"data": 120, "command": 5, "event": 5}
+        before = await processing_counters(prom, worker, warmup)
         row: dict[str, Any] = dict(
             mode=mode, pods_before=pods(cluster, "e1-processing"), before=before
         )
-        row["rows"] = await load(nc, jobs)
-        await asyncio.sleep(4)
+        with phase("comparison-" + mode):
+            row["rows"] = await load(nc, jobs)
+        after = await processing_counters(
+            prom, worker, {f: warmup[f] + sum(r["flow"] == f for r in row["rows"]) for f in warmup}
+        )
         row.update(
-            after=await query(prom, 'eirvah_e1_completed_total{app="e1-processing"}'),
+            after=after,
             pods_after=pods(cluster, "e1-processing"),
             statistics=stats(row["rows"]),
             deployment=json.loads(cluster.run("get", "deployment", "e1-processing", "-o", "json")),
@@ -317,22 +350,23 @@ async def capture(
     await settle(cluster, "uns-auto-contextualizer", 1)
     cluster.run("apply", "-f", str(PROFILE / "hpa.yaml"))
     data["hpa"] = dict(samples=[])
-    task = asyncio.create_task(load(nc, context_jobs(hpa_seconds * hpa_rate, hpa_rate)))
-    try:
-        while not task.done():
-            sample = hpa_sample(cluster)
-            data["hpa"]["samples"].append(sample)
-            print(
-                f"HPA ready={sample['ready']} desired={sample['desired']} cpu={sample['cpu_present']}",
-                flush=True,
-            )
-            save(output, data)
-            await asyncio.sleep(5)
-        data["hpa"]["rows"] = await task
-    finally:
-        if not task.done():
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
+    with phase("hpa-load"):
+        task = asyncio.create_task(load(nc, context_jobs(hpa_seconds * hpa_rate, hpa_rate)))
+        try:
+            while not task.done():
+                sample = hpa_sample(cluster)
+                data["hpa"]["samples"].append(sample)
+                print(
+                    f"HPA ready={sample['ready']} desired={sample['desired']} cpu={sample['cpu_present']}",
+                    flush=True,
+                )
+                save(output, data)
+                await asyncio.sleep(5)
+            data["hpa"]["rows"] = await task
+        finally:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
     for _ in range(40):
         sample = hpa_sample(cluster)
         data["hpa"]["cooled"] = sample
@@ -411,6 +445,7 @@ def main() -> None:
     parser.add_argument("--context", required=True)
     parser.add_argument("--hpa-seconds", type=int, default=120)
     parser.add_argument("--hpa-rate", type=int, default=160)
+    parser.add_argument("--reverse-order", action="store_true")
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if not 90 <= args.hpa_seconds <= 180:
@@ -459,7 +494,14 @@ def main() -> None:
                         base_url=f"http://127.0.0.1:{prom_port}", timeout=10
                     ) as prom:
                         await capture(
-                            cluster, nc, prom, output, data, args.hpa_seconds, args.hpa_rate
+                            cluster,
+                            nc,
+                            prom,
+                            output,
+                            data,
+                            args.hpa_seconds,
+                            args.hpa_rate,
+                            args.reverse_order,
                         )
                 finally:
                     await nc.close()

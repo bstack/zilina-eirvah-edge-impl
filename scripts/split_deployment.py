@@ -61,6 +61,11 @@ def load_config(path: Path) -> dict[str, Any]:
     data: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
     if data.get("schema_version") != "1.0" or not re.fullmatch(r"[a-z0-9-]+", data.get("id", "")):
         raise ValueError("unsupported split configuration")
+    if "fixture" in data and (
+        set(data["fixture"]) != {"start_parked"}
+        or not isinstance(data["fixture"]["start_parked"], bool)
+    ):
+        raise ValueError("unsupported study fixture options")
     for zone in ("edge", "cloud"):
         binding = data[zone]
         if not binding["context"] or not re.fullmatch(
@@ -198,6 +203,15 @@ def materialize(
                 entries = container.setdefault("env", [])
                 entries[:] = [e for e in entries if e["name"] != "MODBUS_SIMULATOR_JAM_PROBABILITY"]
                 entries.append(dict(name="MODBUS_SIMULATOR_JAM_PROBABILITY", value="0"))
+                if config.get("fixture", {}).get("start_parked"):
+                    entries[:] = [
+                        e
+                        for e in entries
+                        if e["name"] != "MODBUS_SIMULATOR_INITIAL_CONVEYOR_RUNNING"
+                    ]
+                    entries.append(
+                        dict(name="MODBUS_SIMULATOR_INITIAL_CONVEYOR_RUNNING", value="false")
+                    )
     return result
 
 

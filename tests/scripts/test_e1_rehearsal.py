@@ -71,3 +71,16 @@ def test_hpa_initial_null_metrics_are_missing_evidence_not_a_runner_crash():
     assert sample["cpu_present"] is False
     assert sample["active"] is False
     assert sample["ready"] == sample["desired"] == 1
+
+
+def test_parameterized_workload_preserves_offered_counts_and_unique_identities():
+    from collections import Counter
+
+    from e1_rehearsal import mixed_jobs
+    from eirvah_contracts.envelope import NATSEnvelope
+
+    jobs = mixed_jobs(2, data_rate=10, command_rate=2, event_rate=3)
+
+    assert Counter(flow for _, flow, _ in jobs) == {"data": 20, "command": 4, "event": 6}
+    assert all(0 <= offset < 2 for offset, _, _ in jobs)
+    assert len({NATSEnvelope.model_validate_json(body).correlation_id for _, _, body in jobs}) == 30

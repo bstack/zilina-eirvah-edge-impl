@@ -22,6 +22,7 @@ from e2_native import SOURCES as NATIVE_SOURCES
 from e2_native import evaluate as evaluate_native
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.authorization import command_digest
+from eirvah_observability.experiment import phase
 from interoperability import PROFILE, ROOT, digest, load_profile
 from scenario import port_forward
 
@@ -332,7 +333,13 @@ def main() -> None:
     try:
         cluster.run("scale", "deployment/decision-agent-stub", "--replicas=0")
         cluster.run(
-            "rollout", "status", "deployment/decision-agent-stub", "--timeout=120s", timeout=130
+            "wait",
+            "--for=delete",
+            "pod",
+            "-l",
+            "app.kubernetes.io/name=decision-agent-stub",
+            "--timeout=90s",
+            timeout=100,
         )
         data["inventory_before"] = cluster.inventory(ACTORS)
         encoded = cluster.run(
@@ -346,7 +353,10 @@ def main() -> None:
             )
             auth = parts.netloc.rsplit("@", 1)[0]
             url = urlunsplit((parts.scheme, auth + f"@127.0.0.1:{amqp_port}", parts.path, "", ""))
-            with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+            with (
+                asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner,
+                phase("paired-command-response"),
+            ):
                 runner.run(exercise(cluster, url, opcua_port, rows, data, output))
         data["inventory_after"] = cluster.inventory(ACTORS)
     except (Exception, KeyboardInterrupt) as exc:

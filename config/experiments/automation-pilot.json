@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "scope": "local_engineering",
+  "context": "kind-eirvah-edge",
+  "repetitions": 2,
+  "seed": 0,
+  "sample_interval_s": 5,
+  "clock_uncertainty_s": 2.0,
+  "budgets": null,
+  "id": "automation-pilot",
+  "stages": [
+    "probe"
+  ],
+  "data_rates": [
+    60
+  ],
+  "duration_s": 45,
+  "command_rate": 5,
+  "event_rate": 5,
+  "hpa_rate": 160,
+  "hpa_seconds": 120,
+  "stage_timeout_s": 1800,
+  "cleanup_grace_s": 300,
+  "split_config": "config/deployments/study-split.json"
+}

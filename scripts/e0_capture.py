@@ -28,6 +28,7 @@ from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.authorization import ApprovedWriteRequest, command_digest, sign_approval
 from eirvah_contracts.envelope import NATSEnvelope
 from eirvah_observability.execution import clock_snapshot
+from eirvah_observability.experiment import phase
 from nats.aio.client import Client as NATSClient
 from scenario import MqttObservations, Scenario, port_forward, run_scenario
 
@@ -626,19 +627,20 @@ async def execute(
     for target in ("temperature", "conveyor", "capper"):
         await asyncio.to_thread(cluster.native, target)
     plan = Scenario.model_validate_json((ROOT / "config/scenarios/local-e0.json").read_text())
-    scenario = await run_scenario(
-        plan,
-        output / "run",
-        sender=sender,
-        observations=NativeTargetObservations(
-            cluster,
-            mqtt_port,
-            os.environ.get("EIRVAH_MQTT_USERNAME", "eirvah"),
-            os.environ.get("EIRVAH_MQTT_PASSWORD", "eirvah-dev-password"),
-        ),
-        repetitions=repetitions,
-        metadata={"capture_profile": profile["id"]},
-    )
+    with phase("bounded-controls"):
+        scenario = await run_scenario(
+            plan,
+            output / "run",
+            sender=sender,
+            observations=NativeTargetObservations(
+                cluster,
+                mqtt_port,
+                os.environ.get("EIRVAH_MQTT_USERNAME", "eirvah"),
+                os.environ.get("EIRVAH_MQTT_PASSWORD", "eirvah-dev-password"),
+            ),
+            repetitions=repetitions,
+            metadata={"capture_profile": profile["id"]},
+        )
     if scenario["outcome"] != "passed":
         raise RuntimeError("scenario did not complete as expected")
     for line in (output / "run/journal.jsonl").read_text().splitlines():

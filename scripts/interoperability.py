@@ -38,6 +38,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PROFILE = ROOT / "config/experiments/e2-golden.json"
 AT = datetime(2026, 11, 7, 12, tzinfo=UTC)
 SOURCES = [
+    ROOT / "libs/eirvah-observability/src/eirvah_observability/experiment.py",
     PROFILE,
     Path(__file__),
     ROOT / "deploy/k3s/base/data-converter/conversion-rules.yaml",

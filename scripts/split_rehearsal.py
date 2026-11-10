@@ -26,6 +26,7 @@ from control import build_command, send
 from e0_capture import Cluster, validate_fence
 from eirvah_contracts.actuation import ActuationRequest
 from eirvah_contracts.authorization import command_digest
+from eirvah_observability.experiment import phase
 from interoperability import ROOT, digest
 from scenario import port_forward
 from split_deployment import CLOUD, EDGE, EDGE_KEYS, load_config, target_mapping
@@ -511,8 +512,10 @@ def main() -> None:
 
             async def run() -> None:
                 try:
-                    await automatic(cluster, config, amqp, opcua, data, output)
-                    await availability(cluster, amqp, data, output)
+                    with phase("automatic-feedback"):
+                        await automatic(cluster, config, amqp, opcua, data, output)
+                    with phase("writer-unavailable-recovery"):
+                        await availability(cluster, amqp, data, output)
                 finally:
                     restored_settings = False
                     try:
