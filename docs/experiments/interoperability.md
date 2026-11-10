@@ -55,11 +55,13 @@ The replay requires no redeployment. To use the new speed normalization in the r
 
 ## Remaining E2 work
 
-1. Exercise equivalent inputs through actual OPC UA, Modbus and S7 acquisition paths in an isolated test selection, without competing with the automatic plant controller.
-2. Reconcile emitted observations across the intended NATS and public MQTT boundaries, then check command outcomes and independently observed device responses where selected.
-3. Add the defined source-addition task and record actual mapping/configuration/code changes, effort and errors. The current baseline is preparation, not a measured claim of less integration effort.
-4. Extend selected quality, timestamp, malformed input, counter-range and event-contract scenarios. Register polling cannot be assumed to supply OPC UA quality or source timestamp semantics.
-5. Run equivalent repetitions on controlled infrastructure and analyse the results alongside E0 checks. This runner is neither an E1 throughput benchmark nor an E3 deployment-flexibility result.
+The selected local preparation profile now covers native acquisition/publication, the gateway-alias source-addition task, selected quality/error policies and paired authenticated command/process response. See the 10 November verification below for the exact evidence boundaries.
+
+1. Run controlled repetitions using equivalent workloads and declared acceptance budgets; reconcile results with E0 evidence.
+2. Measure integration effort/errors prospectively if the paper claims reduced integration effort. Generated mapping changes alone do not measure human effort.
+3. Include live automatic observation-to-command delivery in the controlled profile where that causal path is claimed. The paired operator replay below deliberately tests a different boundary.
+4. Extend the declared case matrix when the final industrial scenario selects additional signals, event contracts or fault policies; this selected profile does not establish all possible protocol behaviour.
+5. Analyse interoperability separately from E1 scaling and E3 public/private/hybrid deployment flexibility.
 
 These fixtures are synthetic and tied to the selected simulated line. They are not presented as a published industrial dataset or a validated physical process model.
 
@@ -108,3 +110,26 @@ The fresh capture `results/e0-capture/2026-11-09T09-42-56-217268Z/` **passed the
 The original automatic-consumer replica count and simulator jam binding were independently confirmed restored, and all 21 research pods were Ready. Docker initially could not start because of stale zero-byte runtime sockets. Only verified socket-only runtime folders were preserved as backups so Docker could recreate them; containers, volumes and the existing cluster were not reset. An early attempt while services were recovering remains retained as incomplete. The successful capture began after all pods were Ready.
 
 This completed rerun supersedes the earlier pending deployment-assurance action. The remaining next actions are to commit/push the native E2 tooling, then complete the source-addition and remaining protocol/contract/command-response comparisons.
+
+
+### Extended selected E2 preparation - 10 November 2026
+
+The selected local preparation report **passes**: `results/e2-preparation/2026-11-10T08-28-44-691371Z/report.md`.
+
+- **Native acquisition and source addition:** `results/e2-native/2026-11-10T08-14-00-203308Z/` passes the original 36 signal cases and the additional gateway task for OPC UA, Modbus and S7. A second native fixture supplies another source alias for the same conveyor-speed signal. Before integration the alias is refused; after the generated conversion/context mappings are applied it produces the same public UNS identity and derived warmer decision. The existing alias still works. Each protocol is an independent before/after trial. Original repository mappings and controller code are unchanged. Retained mapping artifacts record changes; human integration effort is explicitly **not measured**.
+- **Quality/error policies:** 33 in-process production-code cases cover good, stale, future, malformed/version/type/unit/identity/topic data, unknown aliases, OPC UA bad/uncertain quality and a truncated S7 value. These are policy/decode checks, not live protocol fault injections. Modbus and S7 register mappings do not carry OPC UA source-quality semantics; their timestamps represent adapter acquisition.
+- **Paired command and simulated response:** `results/e2-command-response/2026-11-10T08-26-43-346976Z/` passes six selected decisions (22/26 degree C for each protocol), a 99 degree C refusal and restoration. The verified native-derived and source-specific decisions agree. Fresh commands with separate IDs are sent as the authenticated **experiment-driver**, not impersonated as the automatic consumer. The checker reconciles immutable request echoes, completed writer-ledger digests, native OPC UA setpoint readback and simulated temperature response. The temperature must be within 0.75 degree C on three consecutive 0.5-second polls within a 45-second observation window after command completion; these are polls, not three guaranteed independent process updates. This is not an end-to-end latency measurement or a validated thermal-process model.
+- The live command path's pod/image identities, ConfigMap hashes and ledger-volume identity are retained before/after. The automatic consumer is paused to avoid competing commands, then its original replica count and original warmer setpoint are restored. No ledger or simulator volume is reset. A first capture exposed a checker assumption about the public result format and remains retained as failed; the fresh run uses the corrected check against the public `approve`/`written_at` response and persisted completed writer record.
+
+The quality evidence and exact source snapshots are retained in the preparation report directory. Native/command captures retain their own source snapshots, records and cleanup evidence. The summary independently re-evaluates the evidence and checks that the paired command case references the same native input. **Whole-study conformance and C04 remain unknown**; selected preparation passing does not replace controlled comparative experiments or establish live automatic decision-to-command lineage.
+
+Reproduce the three stages from the repository root (the command stage temporarily controls the explicitly named research cluster):
+
+```powershell
+uv run python scripts/e2_native.py --source-addition
+# Substitute the actual output directories printed by the preceding stages.
+uv run python scripts/e2_command_response.py --native-run results/e2-native/<native-run> --context kind-eirvah-edge
+uv run python scripts/e2_suite.py --native-run results/e2-native/<native-run> --command-run results/e2-command-response/<command-run>
+```
+
+Regression validation: **655 passed, 16 skipped**. Ruff, strict mypy for all five E2 modules and `git diff --check` pass. The research controller and all 21 pods were confirmed Ready after the successful run. Current extension changes have not been committed or pushed.

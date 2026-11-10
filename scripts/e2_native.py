@@ -41,6 +41,7 @@ SOURCES = [
     *REPLAY_SOURCES,
     Path(__file__),
     ROOT / "scripts/e2_native_fixture.py",
+    ROOT / "scripts/e2_source_addition.py",
     ROOT / "config/pipelines/uns-contextualizer.yaml",
     ROOT / "uv.lock",
     ROOT / "libs/eirvah-controls/src/eirvah_controls/recovery.py",
@@ -315,6 +316,7 @@ async def capture(resources: OwnedResources, data: dict[str, Any]) -> None:
     raw_messages: list[dict[str, Any]] = []
     dlq_messages: list[dict[str, Any]] = []
     packets: list[dict[str, Any]] = []
+    data["transport_records"] = dict(raw=raw_messages, mqtt=packets, dlq=dlq_messages)
 
     async def raw_message(msg: Any) -> None:
         raw_messages.append(json.loads(msg.data))
@@ -561,6 +563,26 @@ async def capture(resources: OwnedResources, data: dict[str, Any]) -> None:
                             save(output / "evidence.json", data)
                 finally:
                     resources.stop(adapter)
+            if data.get("source_addition_requested"):
+                from e2_source_addition import live_addition
+
+                await live_addition(
+                    resources,
+                    data,
+                    dict(
+                        profile=profile,
+                        nats_url=url,
+                        fixture_ports=fixture_ports,
+                        directory=directory,
+                        raw=raw_messages,
+                        mqtt=packets,
+                        dlq=dlq_messages,
+                        wait=until,
+                        adapter_config=adapter_config,
+                        read_native=read_native,
+                        cases=selected_cases(profile),
+                    ),
+                )
         finally:
             consumer.cancel()
             await asyncio.gather(consumer, return_exceptions=True)
@@ -588,7 +610,10 @@ def evaluate(data: dict[str, Any]) -> dict[str, Any]:
         profile = load_profile(PROFILE)
         cases = selected_cases(profile)
         records = data["transport_records"]
-        if {c["name"] for c in data["containers"]} != {"fixture", "nats", "mqtt"}:
+        expected_containers = {"fixture", "nats", "mqtt"}
+        if data.get("source_addition_requested"):
+            expected_containers.add("fixture-added")
+        if {c["name"] for c in data["containers"]} != expected_containers:
             return result
         if any(
             not c["image_id"]
@@ -726,8 +751,16 @@ def evaluate(data: dict[str, Any]) -> dict[str, Any]:
                     status="pass" if good else "fail",
                 )
             )
+        if data.get("source_addition_requested"):
+            from e2_source_addition import evaluate_addition
+
+            addition = evaluate_addition(data["source_addition"])
+            checks.append(dict(check="gateway_addition", status=addition["source_addition"]))
         result["checks"] = checks
-        result["native_case"] = "fail" if any(c["status"] == "fail" for c in checks) else "pass"
+        statuses = {c["status"] for c in checks}
+        result["native_case"] = (
+            "fail" if "fail" in statuses else "unknown" if "unknown" in statuses else "pass"
+        )
     except (KeyError, TypeError, ValueError, OSError):
         pass
     return result
@@ -736,6 +769,7 @@ def evaluate(data: dict[str, Any]) -> dict[str, Any]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--source-addition", action="store_true")
     args = parser.parse_args()
     output = args.output or ROOT / "results/e2-native" / datetime.now(UTC).strftime(
         "%Y-%m-%dT%H-%M-%S-%fZ"
@@ -749,6 +783,7 @@ def main() -> None:
     data: dict[str, Any] = dict(
         schema_version="1.0",
         mode="isolated_native_loopback",
+        source_addition_requested=args.source_addition,
         rows=[],
         errors=[],
         python_version=sys.version,

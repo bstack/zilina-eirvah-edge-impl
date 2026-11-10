@@ -220,3 +220,13 @@ def test_raw_source_boundary_cannot_be_replaced_with_a_correct_summary(
     native_evidence["rows"][0]["raw"]["payload"][field] = value
 
     assert evaluate(native_evidence)["native_case"] != "pass"
+
+
+def test_unknown_gateway_extension_cannot_be_promoted_to_a_pass(native_evidence):
+    native_evidence["source_addition_requested"] = True
+    extra = copy.deepcopy(native_evidence["containers"][0])
+    extra["name"] = "fixture-added"
+    native_evidence["containers"].append(extra)
+    native_evidence["source_addition"] = {}
+
+    assert evaluate(native_evidence)["native_case"] != "pass"
