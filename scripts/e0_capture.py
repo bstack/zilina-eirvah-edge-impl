@@ -72,6 +72,20 @@ def save(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
+def snapshot_manifest(source: Path, output: Path) -> Path:
+    content = source.read_bytes()
+    document = json.loads(content)
+    if document.get("format_version") != "1.0":
+        raise ValueError("unsupported architecture manifest")
+    selected = output / "architecture-manifest.json"
+    save(selected, document)
+    save(
+        output / "manifest-source.json",
+        {"path": str(source.resolve()), "sha256": hashlib.sha256(content).hexdigest()},
+    )
+    return selected
+
+
 def validate_fence(start: dict[str, Any], end: dict[str, Any]) -> list[str]:
     a, b = start["remote"], end["remote"]
     errors = []
@@ -581,6 +595,7 @@ async def execute(
     starts: dict[str, Any],
     inventory: dict[str, Any],
     approval_key: str | None = None,
+    manifest_path: Path | None = None,
 ) -> dict[str, Any]:
     submissions = []
     host_samples = []
@@ -805,7 +820,9 @@ async def execute(
     ledger = await asyncio.to_thread(cluster.ledger, sorted(ids | bypass_ids))
     save(output / "writer-ledger.json", ledger)
     reference = json.loads((ROOT / "config/architecture/conformance-reference.json").read_text())
-    manifest = json.loads((ROOT / "config/architecture/local-control.json").read_text())
+    manifest = json.loads(
+        (manifest_path or ROOT / "config/architecture/local-control.json").read_text()
+    )
     policies = yaml.safe_load(
         (ROOT / "deploy/k3s/base/actuation-event-validator/actuation-policy.yaml").read_text()
     )["policies"]
@@ -879,6 +896,9 @@ def main() -> None:
         help="Context/namespace/service bindings for private, public or hybrid capture",
     )
     parser.add_argument("--namespace", default="eirvah-edge")
+    parser.add_argument(
+        "--manifest", type=Path, default=ROOT / "config/architecture/local-control.json"
+    )
     parser.add_argument("--repetitions", type=int, default=1)
     parser.add_argument(
         "--assurance", action="store_true", help="Capture the remaining standalone E0 checks"
@@ -901,6 +921,7 @@ def main() -> None:
     if output.exists():
         parser.error("output must be a new directory")
     output.mkdir(parents=True)
+    selected_manifest = snapshot_manifest(args.manifest, output)
     profile = json.loads(PROFILE.read_text())
     save(output / "case-profile.json", profile)
     save(
@@ -1081,6 +1102,7 @@ def main() -> None:
                         starts,
                         inventory,
                         approval_key=approval_key,
+                        manifest_path=selected_manifest,
                     )
                 )
             print(

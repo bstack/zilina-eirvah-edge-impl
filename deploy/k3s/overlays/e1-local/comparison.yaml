@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: e1-processing
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app.kubernetes.io/name: e1-processing}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: e1-processing}
+      annotations:
+        eirvah.uniza/scrape: "true"
+        eirvah.uniza/scrape-port: "8080"
+    spec:
+      containers:
+        - name: processing
+          image: eirvah-e1:local
+          imagePullPolicy: IfNotPresent
+          args: ["/workspace/scripts/e1_processing.py"]
+          env:
+            - {name: E1_MODE, value: shared}
+          ports:
+            - {name: http, containerPort: 8080}
+          readinessProbe:
+            httpGet: {path: /readyz, port: http}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests: {cpu: "1000m", memory: "512Mi"}
+            limits: {cpu: "1000m", memory: "512Mi"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: e1-processing
+spec:
+  selector: {app.kubernetes.io/name: e1-processing}
+  ports:
+    - {name: http, port: 8080, targetPort: http}

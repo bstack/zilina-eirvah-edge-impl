@@ -220,3 +220,22 @@ def test_native_transport_and_ledger_use_their_selected_cluster(monkeypatch):
 
     assert native == (["kubectl", "--context", "edge", "-n", "plant"], "s7-simulator", 102)
     assert calls[0][:2] == ("writer", "controls")
+
+
+def test_custom_manifest_is_snapshotted_with_its_own_provenance(tmp_path):
+    import hashlib
+    import json
+
+    from e0_capture import snapshot_manifest
+
+    source = tmp_path / "split.json"
+    source.write_text(json.dumps(dict(format_version="1.0", id="custom-split")))
+    output = tmp_path / "capture"
+    output.mkdir()
+
+    selected = snapshot_manifest(source, output)
+
+    assert selected == output / "architecture-manifest.json"
+    assert json.loads(selected.read_text())["id"] == "custom-split"
+    provenance = json.loads((output / "manifest-source.json").read_text())
+    assert provenance["sha256"] == hashlib.sha256(source.read_bytes()).hexdigest()

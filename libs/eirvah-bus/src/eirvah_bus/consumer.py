@@ -11,6 +11,7 @@ from collections.abc import Awaitable, Callable
 
 from nats.aio.client import Client as NATSClient
 from nats.aio.msg import Msg
+from nats.aio.subscription import Subscription
 
 Handler = Callable[[Msg], Awaitable[None]]
 
@@ -21,9 +22,9 @@ async def subscribe_queue_group(
     subject: str,
     handler: Handler,
     queue: str | None = None,
-) -> None:
+) -> Subscription:
     """Subscribe *handler* to *subject* in a NATS queue group.
 
     If *queue* is omitted, it defaults to *subject* — the EirVah convention.
     """
-    await nc.subscribe(subject, queue=queue or subject, cb=handler)
+    return await nc.subscribe(subject, queue=queue or subject, cb=handler)

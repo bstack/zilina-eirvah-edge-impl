@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import time
 from pathlib import Path
 from typing import cast
 
@@ -16,8 +18,9 @@ from eirvah_contracts.signals import NormalizedSignalEnvelope
 from eirvah_contracts.uns import UNSPath, build_uns_topic
 from eirvah_observability.health import HealthApp
 from eirvah_observability.logging import configure_logging
-from eirvah_observability.metrics import make_counter
+from eirvah_observability.metrics import make_counter, make_gauge, make_histogram
 from nats.aio.msg import Msg
+from prometheus_client import CollectorRegistry
 from rdflib import Graph
 from rdflib.plugins.sparql import prepareQuery
 from rdflib.query import ResultRow
@@ -123,7 +126,9 @@ def handle_contextualize_request(
 
 
 class AutoContextualizerWorker:
-    def __init__(self, settings: AutoContextualizerSettings) -> None:
+    def __init__(
+        self, settings: AutoContextualizerSettings, *, registry: CollectorRegistry | None = None
+    ) -> None:
         self._settings = settings
         self._graph: Graph | None = None
         self._bus: BusClient | None = None
@@ -132,7 +137,24 @@ class AutoContextualizerWorker:
             "worker_handler_total",
             "Worker handler invocations",
             labelnames=["worker", "outcome"],
+            registry=registry,
         )
+
+        self._inflight = make_gauge(
+            "worker_inflight", "Active handler work", labelnames=["worker"], registry=registry
+        ).labels(worker="uns-auto-contextualizer")
+        self._pending = make_gauge(
+            "worker_pending",
+            "Messages waiting in this NATS subscription (not durable backlog)",
+            labelnames=["worker"],
+            registry=registry,
+        ).labels(worker="uns-auto-contextualizer")
+        self._duration = make_histogram(
+            "worker_service_seconds",
+            "Handler service duration excluding subscription wait",
+            labelnames=["worker"],
+            registry=registry,
+        ).labels(worker="uns-auto-contextualizer")
 
     def is_ready(self) -> bool:
         return self._ready
@@ -145,7 +167,10 @@ class AutoContextualizerWorker:
             name="uns-auto-contextualizer",
         )
         await self._bus.connect()
-        await subscribe_queue_group(nc=self._bus.nc, subject=SUBJECT, handler=self._handle)
+        subscription = await subscribe_queue_group(
+            nc=self._bus.nc, subject=SUBJECT, handler=self._handle
+        )
+        self._pending.set_function(lambda: subscription.pending_msgs)
         self._ready = True
         _log.info("contextualizer_ready", subject=SUBJECT, ontology_nodes=node_count)
         await asyncio.get_event_loop().create_future()
@@ -157,9 +182,21 @@ class AutoContextualizerWorker:
             _log.warning("invalid_envelope", error=str(exc))
             return
         assert self._graph is not None
-        reply = handle_contextualize_request(envelope, self._graph)
-        self._handled.labels(worker="uns-auto-contextualizer", outcome=reply.status).inc()
-        await msg.respond(reply.model_dump_json().encode())
+        started = time.monotonic()
+        self._inflight.inc()
+        try:
+            # The subscription dispatches callbacks serially; the read-only graph has
+            # one caller, while the event loop remains available for HTTP/NATS I/O.
+            reply = await asyncio.to_thread(handle_contextualize_request, envelope, self._graph)
+            self._handled.labels(worker="uns-auto-contextualizer", outcome=reply.status).inc()
+            msg.headers = {
+                **(msg.headers or {}),
+                "X-Eirvah-Worker": os.environ.get("HOSTNAME", "local"),
+            }
+            await msg.respond(reply.model_dump_json().encode())
+        finally:
+            self._inflight.dec()
+            self._duration.observe(time.monotonic() - started)
 
 
 async def run(settings: AutoContextualizerSettings) -> None:

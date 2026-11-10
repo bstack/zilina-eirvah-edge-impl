@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uns-auto-contextualizer
+spec:
+  template:
+    spec:
+      containers:
+        - name: uns-auto-contextualizer
+          image: eirvah-e1:local
+          args: ["-m", "uns_auto_contextualizer"]
+          resources:
+            requests: {cpu: "250m", memory: "128Mi"}
+            limits: {cpu: "500m", memory: "256Mi"}

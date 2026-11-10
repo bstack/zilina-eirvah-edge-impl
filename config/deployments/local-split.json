@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "id": "local-split-v1",
+  "edge": {"context": "kind-eirvah-edge", "namespace": "eirvah-split-edge"},
+  "cloud": {"context": "kind-eirvah-edge", "namespace": "eirvah-split-cloud"},
+  "connections": {
+    "nats_servers": ["nats://nats.eirvah-split-edge.svc.cluster.local:4222"],
+    "amqp_host": "rabbitmq.eirvah-split-cloud.svc.cluster.local",
+    "amqp_port": 5672
+  },
+  "images": {
+    "data-converter": "data-converter:5fbf81f",
+    "uns-auto-contextualizer": "eirvah-e1:local"
+  }
+}

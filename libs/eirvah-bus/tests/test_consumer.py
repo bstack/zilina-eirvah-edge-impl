@@ -11,13 +11,14 @@ async def test_subscribe_queue_group_registers_handler() -> None:
     async def handler(msg) -> None:  # type: ignore[no-untyped-def]
         return None
 
-    await subscribe_queue_group(
+    subscription = await subscribe_queue_group(
         nc=nc,
         subject="uns.work.convert",
         queue="uns.work.convert",
         handler=handler,
     )
 
+    assert subscription is nc.subscribe.return_value
     nc.subscribe.assert_awaited_once_with(
         "uns.work.convert",
         queue="uns.work.convert",
